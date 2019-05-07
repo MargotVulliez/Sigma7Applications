@@ -1,0 +1,83 @@
+<?xml version="1.0" ?>
+
+<!-- <world name="demo_world" gravity="0.0 0.0 -9.81"> -->
+<world name="demo_world" gravity="0.0 0.0 0.0">
+
+	<robot name="Kuka-IIWA">
+		<!-- model node is required -->
+		<model dir="../resources/03-HapticConstruction" path="kuka_iiwa.urdf" name="kuka_iiwa" />
+		<!-- origin node is optional -->
+		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	</robot>
+
+	<static_object name="Floor">
+		<origin xyz="0.4 1.0 0.0" rpy="0 0 0" />
+		<collision>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="3.0 3.5 0.05" />
+	        </geometry>
+	    </collision>
+	    <visual>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="3.0 3.5 0.05" />
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.75 0.75 0.75 1.0" />
+	        </material>
+	    </visual>
+	</static_object>
+
+ 
+	<static_object name="Construction">
+		<origin xyz="0.75 -1.78 0.1" rpy="0 0 1.55" />
+	    <collision>
+	        <origin xyz="3 1.6 0.5" rpy="0 0 0" />
+	        <geometry>
+	            <!-- <mesh filename="../../Model/objects/construction.obj" scale="0.5 0.5 0.5" /> -->
+	            <box size="4 0.12 2" />
+	        </geometry>
+	    </collision>
+	    <visual>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <mesh filename="../../Model/objects/construction.obj" scale="0.5 0.5 0.5" />
+	        <!-- <box size="4 0.12 2" /> -->
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.75 0.75 0.75 1.0" />
+	        </material>
+	    </visual>
+	</static_object>
+
+
+	<light name="light1" type="directional">
+		<position xyz="-2.0 -2.0 2.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light>
+
+	<light name="light2" type="directional">
+		<position xyz="2.0 2.0 2.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light>
+
+<!-- 	<light name="light3" type="directional">
+		<position xyz="-2.0 2.0 -2.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light>
+
+	<light name="light4" type="directional">
+		<position xyz="-2.0 -2.0 -2.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light> -->
+
+	<camera name="camera">
+		<position xyz="2.0 0.0 2.0" />
+		<vertical xyz="0.0 0.0 1.0" />
+		<lookat xyz="0.0 0.0 0.8" />
+	</camera>
+
+	<!-- TODO: support stereo specification -->
+
+</world>

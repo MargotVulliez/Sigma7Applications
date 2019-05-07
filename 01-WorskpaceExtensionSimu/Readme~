@@ -1,0 +1,20 @@
+QUESTIONS
+- Variables locales task HapticWorkspaceExtension idem fct. set[] ?
+- Initialisation des paramètres du controleur (variables locales)
+
+
+
+TODO
+- Definir la pièce à polir dans world (à la place de box)
+- Créer le fichier kuka_iiwa_dremel.urdf (et m-a-j world et CMakeLists)
+- Task primitive: Haptic Workspace Extension
+	Update de la matrice d'inertie du dispositif haptique (updateDeviceModel())
+	Vérifier utilisation des fonctions set vis-à-vis du contrôleur
+	
+
+- Définir Redis Key !
+- Définir la machine d'état
+- Ecrire le controller en impedance avec workspace extension
+- Modifier Simviz pour l'application
+
+
