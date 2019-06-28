@@ -1,0 +1,10 @@
+/home/margot/sai-2/apps/Sigma7Applications/build/01-WorskpaceExtensionSimu/CMakeFiles/simviz01.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/02-HapticDeviceDriver/CMakeFiles/simviz02.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/03-HapticConstruction/CMakeFiles/simviz03.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/04-HapticDeviceHumanInteraction/CMakeFiles/simviz04.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/05-HapticDeviceGuidance/CMakeFiles/simviz05.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/01-WorskpaceExtensionSimu/CMakeFiles/controller01.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/02-HapticDeviceDriver/CMakeFiles/controller02.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/03-HapticConstruction/CMakeFiles/controller03.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/04-HapticDeviceHumanInteraction/CMakeFiles/controller04.dir
+/home/margot/sai-2/apps/Sigma7Applications/build/05-HapticDeviceGuidance/CMakeFiles/controller05.dir

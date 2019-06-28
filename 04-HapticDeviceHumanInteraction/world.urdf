@@ -29,6 +29,82 @@
 	    </visual>
 	</static_object>
 
+	<static_object name="tray">
+		<origin xyz="-0.5 -0.0 0.5" rpy="0 0 0" />
+		<inertial>
+	        <origin xyz="0 0 0" rpy="0 0 0" />
+	        <mass value="0.1" />
+	        <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0" />
+	      </inertial>
+		<visual>
+	        <geometry>
+	            <box size="0.15 0.15 0.01" />
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.6 0.9 0.6 1.0" />
+	        </material>
+	    </visual>
+	    <collision>
+	        <geometry>
+	            <box size="0.2 0.3 0.01" />
+	        </geometry>
+	    </collision>
+		<!-- <visual>
+			<origin xyz="0.1 0.0 0.03" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.01 0.3 0.05" />
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.6 0.9 0.6 1.0" />
+	        </material>
+	    </visual>
+		<visual>
+			<origin xyz="-0.1 0.0 0.03" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.01 0.3 0.05" />
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.6 0.9 0.6 1.0" />
+	        </material>
+	    </visual>
+		<visual>
+			<origin xyz="0.0 0.15 0.03" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.2 0.01 0.05" />
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.6 0.9 0.6 1.0" />
+	        </material>
+	    </visual>
+		<visual>
+			<origin xyz="0.0 -0.15 0.03" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.2 0.01 0.05" />
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.6 0.9 0.6 1.0" />
+	        </material>
+	    </visual> -->
+<!-- 		<collision>
+			<origin xyz="0.0 0.15 0.03" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.2 0.01 0.05" />
+	        </geometry>
+	    </collision>
+		<collision>
+			<origin xyz="0.0 -0.15 0.03" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.2 0.01 0.05" />
+	        </geometry>
+	    </collision> -->
+<!-- 		<collision>
+			<origin xyz="0.0 0.0 -0.01" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.3 0.25 0.01" />
+	        </geometry>
+	    </collision> -->
+	</static_object>
+
  
 	<light name="light1" type="directional">
 		<position xyz="-2.0 -2.0 2.0" />

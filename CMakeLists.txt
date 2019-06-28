@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 2.8.12)
 project (Sigma7Applications)
 SET(CMAKE_CXX_FLAGS "-std=c++11")
-SET(CMAKE_BUILD_TYPE "Debug")
-# SET(CMAKE_BUILD_TYPE "Release")
+# SET(CMAKE_BUILD_TYPE "Debug")
+SET(CMAKE_BUILD_TYPE "Release")
 
 # set common source
 set (SIGMA7_APPLICATIONS_COMMON_SOURCE
@@ -82,8 +82,9 @@ set(SIGMA7_APPLICATIONS_COMMON_LIBRARIES
 # add apps
 set (SIGMA7_APPLICATIONS_BINARY_DIR                  ${PROJECT_SOURCE_DIR}/bin)
 
-# add_subdirectory(01-WorskpaceExtensionSimu)
+add_subdirectory(01-WorskpaceExtensionSimu)
 add_subdirectory(02-HapticDeviceDriver)
 add_subdirectory(03-HapticConstruction)
 add_subdirectory(04-HapticDeviceHumanInteraction)
+add_subdirectory(05-HapticDeviceGuidance)
 

@@ -38,7 +38,7 @@ string JOINT_VELOCITIES_KEY  = "sai2::Sigma7Applications::sensors::dq";
 string FORCE_SENSED_KEY = "sai2::Sigma7Applications::sensors::force_task_sensed";
 
 // - read (from haptic device command input):
-string JOINT_TORQUES_COMMANDED_KEY = "sai2::Sigma7Applications::actuators::torque_joint_robot";
+string JOINT_TORQUES_COMMANDED_KEY = "sai2::Sigma7Applications::actuators::commanded_torque_robot";
 
 RedisClient redis_client;
 

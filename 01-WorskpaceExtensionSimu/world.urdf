@@ -4,10 +4,17 @@
 <world name="demo_world" gravity="0.0 0.0 0.0">
 
 	<robot name="Kuka-IIWA">
-		<!-- model node is required -->
 		<model dir="../resources/01-WorskpaceExtensionSimu" path="kuka_iiwa.urdf" name="kuka_iiwa" />
-		<!--model dir="../resources/01-WorskpaceExtensionSimu" path="kuka_iiwa_dremel.urdf" name="kuka_iiwa_dremel" -->
-		<!-- origin node is optional -->
+		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	</robot>
+
+<!-- 	<robot name="proxy">
+		<model dir="../resources/01-WorskpaceExtensionSimu" path="proxy.urdf" name="proxy" />
+		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	</robot> -->
+
+	<robot name="proxy6d">
+		<model dir="../resources/01-WorskpaceExtensionSimu" path="proxy6d.urdf" name="proxy6d" />
 		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	</robot>
 
@@ -29,14 +36,13 @@
 	        </material>
 	    </visual>
 	</static_object>
-
  
 	<static_object name="Part">
-		<origin xyz="-0.5 0.0 0.4" rpy="0 0 0" />
+		<origin xyz="-0.4 0.0 0.45" rpy="0 0 0" />
 	    <collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
-	            <box size="0.2 0.2 0.2" />
+	            <box size="0.4 0.4 0.2" />
 	        </geometry>
 	        <!-- <geometry>
 	            <mesh filename="../../Model/part.obj" scale="1 1 1" />
@@ -48,7 +54,7 @@
 	            <mesh filename="../../Model/part.obj" scale="1 1 1" />
 	        </geometry> -->
 	        <geometry>
-	            <box size="0.2 0.2 0.2" />
+	            <box size="0.4 0.4 0.2" />
 	        </geometry>
 	        <material name="material_red">
 		        <color rgba="1 0.1 0.1 1.0" />
