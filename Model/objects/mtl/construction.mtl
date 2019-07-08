@@ -1,0 +1,25 @@
+﻿
+newmtl R0,G0,B0
+Kd 0 0 0 
+Ka 0 0 0 
+Ks 0 0 0 
+d 1
+
+newmtl R127,G127,B127
+Kd 0.498039 0.498039 0.498039 
+Ka 0 0 0 
+Ks 0 0 0 
+d 1
+
+newmtl R0,G0,B0
+Kd 0 0 0 
+Ka 0 0 0 
+Ks 0 0 0 
+d 1
+
+newmtl finishes.gypsum board.painted.white.jpeg
+Kd 1 1 1 
+Ka 0.5 0.5 0.5 
+Ks 0 0 0 
+d 1
+map_Kd C:\Users\cynth\AppData\Roaming\SimLab\SimLab OBJ From Revit 2020\data\Imported_Textures\8\DWF\SimLabDWFFile\finishes.gypsum board.painted.white.jpeg

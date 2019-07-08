@@ -1,0 +1,109 @@
+<?xml version="1.0" ?>
+<robot name="proxy6d">
+    <link name="base_link">
+        <inertial>
+            <origin xyz="0 0 0.14" rpy="0 0 0" />
+            <mass value="4" />
+            <inertia ixx="0.4" iyy="0.4" izz="0.4" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+    </link>
+    <link name="link0">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="0.000001" />
+            <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+    </link>
+    <link name="link1">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="0.000001" />
+            <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+    </link>
+    <link name="link2">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="0.000001" />
+            <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+    </link>
+    <link name="link3">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="0.000001" />
+            <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+    </link>
+    <link name="link4">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="0.000001" />
+            <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+    </link>
+    <link name="link5">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="0.000001" />
+            <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="0.03 0.03 0.03"/>
+            </geometry>
+        </visual>
+<!--      <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="0.03 0.03 0.03"/>
+            </geometry>
+        </collision> -->
+<!--          <material name="material_red">
+            <color rgba="1 0.1 0.1 1.0" />
+        </material> -->
+    </link>
+    <joint name="j0" type="prismatic">
+        <parent link="base_link" />
+        <child link="link0" />
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+        <axis xyz="1 0 0" />
+        <limit lower="-10" upper="10" effort="1000" velocity="100" />
+    </joint>
+    <joint name="j1" type="prismatic">
+        <parent link="link0" />
+        <child link="link1" />
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+        <axis xyz="0 1 0" />
+        <limit lower="-10" upper="10" effort="1000" velocity="100" />
+    </joint>
+    <joint name="j2" type="prismatic">
+        <parent link="link1" />
+        <child link="link2" />
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+        <axis xyz="0 0 1" />
+        <limit lower="-10" upper="10" effort="1000" velocity="100" />
+    </joint>
+    <joint name="j3" type="revolute">
+        <parent link="link2" />
+        <child link="link3" />
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+        <axis xyz="1 0 0" />
+        <limit lower="-7" upper="7" effort="200" velocity="25" />
+    </joint>
+    <joint name="j4" type="revolute">
+        <parent link="link3" />
+        <child link="link4" />
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+        <axis xyz="0 1 0" />
+        <limit lower="-7" upper="7" effort="200" velocity="25" />
+    </joint>
+    <joint name="j5" type="revolute">
+        <parent link="link4" />
+        <child link="link5" />
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+        <axis xyz="0 0 1" />
+        <limit lower="-7" upper="7" effort="200" velocity="25" />
+    </joint>
+</robot>

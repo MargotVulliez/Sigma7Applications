@@ -227,21 +227,32 @@ int main() {
 	Matrix3d HomeRot_op;
 	HomeRot_op.setIdentity();
 	teleop_task->setDeviceCenter(HomePos_op, HomeRot_op);
-	// Force feedback stiffness proxy parameters
-	double k_pos = 400.0;
-	double d_pos = 20.0;
-	double k_ori = 10.0;
-	double d_ori = 0.5;
+// Force feedback stiffness proxy parameters
+	double proxy_position_impedance = 2000.0;
+	double proxy_position_damping = 5.0;
+	double proxy_orientation_impedance = 20.0;
+	double proxy_orientation_damping = 0.1;
+	teleop_task->setVirtualProxyGains (proxy_position_impedance, proxy_position_damping,
+									   proxy_orientation_impedance, proxy_orientation_damping);
+	// Set haptic controllers parameters
 	Matrix3d Red_factor_rot = Matrix3d::Identity();
 	Matrix3d Red_factor_trans = Matrix3d::Identity();
 	Red_factor_rot << 1/20.0, 0.0, 0.0,
 						  0.0, 1/20.0, 0.0,
 						  0.0, 0.0, 1/20.0;
-
 	Red_factor_trans << 1/2.0, 0.0, 0.0,
 						  0.0, 1/2.0, 0.0,
 						  0.0, 0.0, 1/2.0;
-	teleop_task->setForceFeedbackCtrlGains (k_pos, d_pos, k_ori, d_ori, Red_factor_rot, Red_factor_trans);
+	double kp_robot_trans_velocity = 10.0;
+	double ki_robot_trans_velocity = 0.0;
+	double kp_robot_rot_velocity =10.0;
+	double ki_robot_rot_velocity =0.0;
+	double robot_trans_admittance =1/50.0;
+	double robot_rot_admittance =1/1.5;
+	teleop_task->setForceFeedbackCtrlGains (kp_robot_trans_velocity, ki_robot_trans_velocity,
+									kp_robot_rot_velocity, ki_robot_rot_velocity,
+									robot_trans_admittance, robot_rot_admittance,
+									Red_factor_trans, Red_factor_rot);
 
 	double Rmax_dev = 0.025; // in [mm]
 	double Rmax_env = 0.2;

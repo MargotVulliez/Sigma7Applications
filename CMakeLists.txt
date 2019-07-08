@@ -87,4 +87,5 @@ add_subdirectory(02-HapticDeviceDriver)
 add_subdirectory(03-HapticConstruction)
 add_subdirectory(04-HapticDeviceHumanInteraction)
 add_subdirectory(05-HapticDeviceGuidance)
+add_subdirectory(06-HapticGuidanceFranka)
 

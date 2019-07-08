@@ -249,21 +249,33 @@ int main() {
 	Matrix3d HomeRot_op;
 	HomeRot_op.setIdentity();
 	teleop_task->setDeviceCenter(HomePos_op, HomeRot_op);
+
 	// Force feedback stiffness proxy parameters
-	double k_pos = 3000.0;
-	double d_pos = 1.0;
-	double k_ori = 20.0;
-	double d_ori = 0.1;
+	double proxy_position_impedance = 3000.0;
+	double proxy_position_damping = 5.0;
+	double proxy_orientation_impedance = 20.0;
+	double proxy_orientation_damping = 0.1;
+	teleop_task->setVirtualProxyGains (proxy_position_impedance, proxy_position_damping,
+									   proxy_orientation_impedance, proxy_orientation_damping);
+	// Set haptic controllers parameters
 	Matrix3d Red_factor_rot = Matrix3d::Identity();
 	Matrix3d Red_factor_trans = Matrix3d::Identity();
-	Red_factor_rot << 1/10.0, 0.0, 0.0,
-						  0.0, 1/10.0, 0.0,
-						  0.0, 0.0, 1/10.0;
-
+	Red_factor_rot << 1/20.0, 0.0, 0.0,
+						  0.0, 1/20.0, 0.0,
+						  0.0, 0.0, 1/20.0;
 	Red_factor_trans << 1/2.0, 0.0, 0.0,
 						  0.0, 1/2.0, 0.0,
 						  0.0, 0.0, 1/2.0;
-	teleop_task->setForceFeedbackCtrlGains (k_pos, d_pos, k_ori, d_ori, Red_factor_rot, Red_factor_trans);
+	double kp_robot_trans_velocity = 10.0;
+	double ki_robot_trans_velocity = 0.0;
+	double kp_robot_rot_velocity =10.0;
+	double ki_robot_rot_velocity =0.0;
+	double robot_trans_admittance =1/50.0;
+	double robot_rot_admittance =1/1.5;
+	teleop_task->setForceFeedbackCtrlGains (kp_robot_trans_velocity, ki_robot_trans_velocity,
+									kp_robot_rot_velocity, ki_robot_rot_velocity,
+									robot_trans_admittance, robot_rot_admittance,
+									Red_factor_trans, Red_factor_rot);
 
 	Vector3d pos_rob = Vector3d::Zero(); // Set position and orientation in robot frame
 
@@ -296,6 +308,9 @@ int main() {
 
 	teleop_task->_haptic_feedback_from_proxy = false;
 	teleop_task->_filter_on = false;
+	double fc_force=0.02;
+	double fc_moment=0.02;
+	teleop_task->setFilterCutOffFreq(fc_force, fc_moment);
 
 	// Initialize haptic device if Sigma.7
 	teleop_task->initializeSigmaDevice();
@@ -424,15 +439,16 @@ int main() {
 		//Compute haptic commands
 		teleop_task->_haptic_feedback_from_proxy = false; // If set to true, the force feedback is computed from a stiffness/damping proxy.
 	    teleop_task->_filter_on = false;
-		double fc_force=0.02;
-		double fc_moment=0.02;
-		teleop_task->setFilterCutOffFreq(fc_force, fc_moment);
 
+		// Force feedback from force sensor
 		// teleop_task->updateSensedForce(f_proxy_simulation); // BUG... - Computed through chai3D Finger Proxy algorithm
 		teleop_task->updateSensedForce(f_task_sensed);
 		teleop_task->_send_haptic_feedback = true;
 		
-		// teleop_task->updateSensedRobotPositionVelocity(pos_rob_model, vel_trans_rob_model, rot_rob_model, vel_rot_rob_model);
+		// Force feedback from proxy
+		// teleop_task->updateVirtualProxyPositionVelocity(pos_proxy_model, vel_trans_proxy_model, rot_proxy_model, vel_rot_proxy_model);
+		// teleop_task->_send_haptic_feedback = true;
+
 		// if (f_task_sensed.norm()>=0.000001)
 		// {
 		// 	teleop_task->_send_haptic_feedback = true;	
@@ -442,15 +458,16 @@ int main() {
 		//  	teleop_task->_send_haptic_feedback = false;
 		//  }
 
-		// teleop_task->updateSensedRobotPositionVelocity(pos_proxy_model, vel_trans_proxy_model, rot_proxy_model, vel_rot_proxy_model);
-		// teleop_task->_send_haptic_feedback = true;
+		// Force feedback from velocity PI in admittance-type scheme
+		// teleop_task->updateSensedRobotPositionVelocity(pos_rob_model, vel_trans_rob_model, rot_rob_model, vel_rot_rob_model);
+
 
 	    // teleop_task->computeHapticCommands3d(pos_rob);
 		teleop_task->computeHapticCommands6d(pos_rob, rot_rob);
 		//teleop_task->computeHapticCommandsWorkspaceExtension6d(pos_rob, rot_rob);
 		// teleop_task->computeHapticCommandsWorkspaceExtension3d(pos_rob);
 		
-		//Send set position and velocity from haptic device to simulation for finger proxy calculation
+		//Send set position and velocity from haptic device to simulation for finger proxy calculation of chai3D
 		// command_trans_velocity = teleop_task->_vel_trans_rob;
 		// command_position = pos_rob;
 
