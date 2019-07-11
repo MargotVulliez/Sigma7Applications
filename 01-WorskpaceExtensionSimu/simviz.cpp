@@ -1,8 +1,7 @@
-// This example simulates the haptic interaction of a grinder with a part during a 
-// polishing operation.
-// This example application loads a URDF world file with a part to polish. A kuka iiwa robot
-// with physics and contact with the virtual world is simulated. The graphics of the task 
-// interaction is rendered by using Chai3D.
+// This example simulates the remote control of a Kuka iiwa interacting with a rigid box.
+// The robot is equipped with a spherical or rectangular tool. The haptic interaction are
+// estimated or sensed in the virtual task environment. This simulation runs with the
+// application controller (state machine, haptic device's and remote robot's controllers).
 
 #include "Sai2Model.h"
 #include "Sai2Graphics.h"

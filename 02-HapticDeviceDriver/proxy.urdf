@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<robot name="proxy6d">
+<robot name="proxy">
     <link name="base_link">
         <inertial>
             <origin xyz="0 0 0.14" rpy="0 0 0" />
@@ -49,20 +49,17 @@
             <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
         </inertial>
         <visual>
-            <origin xyz="0 0 0" rpy="0 0 0" />
+            <origin xyz="0 0 0.0" rpy="0 0 0"/>
             <geometry>
-                <box size="0.03 0.03 0.03"/>
+                <sphere radius="0.03" />
             </geometry>
         </visual>
- <!--    <collision>
-            <origin xyz="0 0 0" rpy="0 0 0" />
+        <collision>
+            <origin xyz="0 0 0.0" rpy="0 0 0"/>
             <geometry>
-                <box size="0.03 0.03 0.03"/>
+                <sphere radius="0.03" />
             </geometry>
         </collision>
-<!--          <material name="material_red">
-            <color rgba="1 0.1 0.1 1.0" />
-        </material> -->
     </link>
     <joint name="j0" type="prismatic">
         <parent link="base_link" />

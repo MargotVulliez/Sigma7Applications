@@ -1,8 +1,10 @@
-// This example simulates the haptic interaction of a grinder with a part during a 
-// polishing operation and implements the workspace extension algorithm.
-// This example application loads a URDF world file with a part to polish. A kuka iiwa robot
-// with physics and contact with the virtual world is simulated. The graphics of the task 
-// interaction is rendered by using Chai3D.
+// The application simulates the remote control of a Kuka iiwa interacting with a rigid box.
+// This controller manages the application state machine and executes the haptic device's and
+// the robot's controllers from the sai2-primitive tasks. It implements the OpenLoopTeleop
+// class to test the different bilateral teleoperation scheme with force feedback.
+// This haptic control class is dedicated to Force Dimension haptic devices and directly manages
+// the devices thanks to the chai3D library. The robot behavior can be simulated by running
+// simviz.cpp or the real robot can be controlled with its own driver.
 
 #include "Sai2Model.h"
 #include "redis/RedisClient.h"
@@ -41,6 +43,8 @@ cHapticDeviceHandler* handler;
 // a pointer to the current haptic device
 cGenericHapticDevicePtr hapticDevice;
 bool device_started = false;
+
+bool admittance_control = true;
 
 //////////////////////////////////////////////////////////////////////
 // //Definition of the state machine for the robot controller
@@ -179,8 +183,10 @@ int main() {
 
 	posori_task->_kp_pos = 200.0;
 	posori_task->_kv_pos = 15.0;
+	posori_task->_ki_pos = 0.0;
 	posori_task->_kp_ori = 200.0;
 	posori_task->_kv_ori = 20.0;
+	posori_task->_ki_ori = 0.0;
 
 	// Define position and orientation of the task center ////////////////////////////////////////////////////////////////////////////////
 	Vector3d centerPos_rob;
@@ -243,7 +249,7 @@ int main() {
 	teleop_task->setWorkspaceSize(Rmax_dev, Rmax_env, Thetamax_dev, Thetamax_env);
 	teleop_task->setForceNoticeableDiff(Fdrift_perc);
 
-	 // Center of the haptic device workspace
+	// Center of the haptic device workspace
 	Vector3d HomePos_op;
 	HomePos_op << 0.0, 0.01, 0.0;
 	Matrix3d HomeRot_op;
@@ -278,8 +284,10 @@ int main() {
 									Red_factor_trans, Red_factor_rot);
 
 	Vector3d pos_rob = Vector3d::Zero(); // Set position and orientation in robot frame
-
 	Matrix3d rot_rob = Matrix3d::Identity();
+	Vector3d desired_trans_velocity_robot = Vector3d::Zero();; // Set velocities in robot frame from admittance controller
+	Vector3d desired_rot_velocity_robot = Vector3d::Zero();;
+
 	Vector3d pos_rob_model = Vector3d::Zero(); // Model position and orientation in robot frame
 	Matrix3d rot_rob_model = Matrix3d::Identity();
 	Vector3d vel_rot_rob_model = Vector3d::Zero(); // Model linear and angular velocities in robot frame
@@ -410,6 +418,19 @@ int main() {
 			// Reinitialize controllers
 			joint_task->reInitializeTask();
 			joint_task->_desired_position = goal_posture;
+
+
+		if (admittance_control)
+		 {
+	 		posori_task->_kp_pos = 15.0; //Integral term for the velocity controller
+			posori_task->_kv_pos = 30.0; //Proportional gain for the velocity controller
+			posori_task->_ki_pos = 0.0;
+			posori_task->_kp_ori = 15.0;
+			posori_task->_kv_ori = 30.0;
+			posori_task->_ki_ori = 0.0;
+
+		 }
+
 			posori_task->reInitializeTask();
 
 			posori_task_proxy->reInitializeTask();
@@ -435,13 +456,32 @@ int main() {
 	else if(state == HAPTIC_CONTROL)
 	{
 
+		if (admittance_control) //// Admittance controller of the robot ////
+		{
+		// Force feedback from velocity PI in admittance-type scheme
+		teleop_task->updateSensedRobotPositionVelocity(pos_rob_model, vel_trans_rob_model, rot_rob_model, vel_rot_rob_model);
 
-		//Compute haptic commands
+		teleop_task->computeHapticCommandsAdmittance3d(desired_trans_velocity_robot);
+		// teleop_task->computeHapticCommandsAdmittance6d(desired_trans_velocity_robot, desired_rot_velocity_robot);
+
+		// cout << "desired trans velocity" << desired_trans_velocity_robot << endl;
+
+		// Compute the desired position by integrating the velocity
+		pos_rob = desired_trans_velocity_robot*dt + pos_rob_model;
+		//rot_rob = desired_rot_velocity_robot*dt.................
+		
+		// set goal velocities
+		posori_task->_desired_velocity = desired_trans_velocity_robot;
+		// posori_task->_desired_angular_velocity = desired_rot_velocity_robot; // only if 6D feedback/control
+		}
+		else //// Impedance controller of the robot ////
+		{
+			//Compute haptic commands
 		teleop_task->_haptic_feedback_from_proxy = false; // If set to true, the force feedback is computed from a stiffness/damping proxy.
 	    teleop_task->_filter_on = false;
 
 		// Force feedback from force sensor
-		// teleop_task->updateSensedForce(f_proxy_simulation); // BUG... - Computed through chai3D Finger Proxy algorithm
+		//teleop_task->updateSensedForce(f_proxy_simulation); // BUG... - Computed through chai3D Finger Proxy algorithm
 		teleop_task->updateSensedForce(f_task_sensed);
 		teleop_task->_send_haptic_feedback = true;
 		
@@ -458,29 +498,23 @@ int main() {
 		//  	teleop_task->_send_haptic_feedback = false;
 		//  }
 
-		// Force feedback from velocity PI in admittance-type scheme
-		// teleop_task->updateSensedRobotPositionVelocity(pos_rob_model, vel_trans_rob_model, rot_rob_model, vel_rot_rob_model);
-
-
-	    // teleop_task->computeHapticCommands3d(pos_rob);
-		teleop_task->computeHapticCommands6d(pos_rob, rot_rob);
+	    teleop_task->computeHapticCommands3d(pos_rob);
+		// teleop_task->computeHapticCommands6d(pos_rob, rot_rob);
 		//teleop_task->computeHapticCommandsWorkspaceExtension6d(pos_rob, rot_rob);
 		// teleop_task->computeHapticCommandsWorkspaceExtension3d(pos_rob);
 		
 		//Send set position and velocity from haptic device to simulation for finger proxy calculation of chai3D
 		// command_trans_velocity = teleop_task->_vel_trans_rob;
 		// command_position = pos_rob;
-
-		//// Impedance controller of the robot ////
+		}
+		
 		// set goal position
 		posori_task->_desired_position = pos_rob;
-		posori_task->_desired_orientation = rot_rob;
-		// posori_task->_desired_orientation = centerRot_rob; // If only 3D feedback/control
+		// posori_task->_desired_orientation = rot_rob;// Only if 6D feedback/control
 
 		// Set new commanded proxy position
 		posori_task_proxy->_desired_position = pos_rob;
-		posori_task_proxy->_desired_orientation = rot_rob; 
-		// posori_task_proxy->_desired_orientation = centerRot_rob; // If only 3D feedback/control
+		//posori_task_proxy->_desired_orientation = rot_rob;// Only if 6D feedback/control
 
 		// update proxy position task
 		N_prec_proxy.setIdentity();
@@ -507,6 +541,12 @@ int main() {
 			joint_task->reInitializeTask();
 			joint_task->_desired_position = robot->_q;
 
+			posori_task->_kp_pos = 200.0;
+			posori_task->_kv_pos = 15.0;
+			posori_task->_ki_pos = 0.0;
+			posori_task->_kp_ori = 200.0;
+			posori_task->_kv_ori = 20.0;
+			posori_task->_ki_ori = 0.0;
 			// reinitialize proxy
 			posori_task_proxy->reInitializeTask();
 
