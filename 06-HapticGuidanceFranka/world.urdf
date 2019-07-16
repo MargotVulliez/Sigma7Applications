@@ -29,6 +29,25 @@
 	    </visual>
 	</static_object>
 
+		<static_object name="Plane">
+		<origin xyz="0.6 0.0 0.3" rpy="0.2 0 0" />
+		<collision>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.8 0.8 0.03" />
+	        </geometry>
+	    </collision>
+	    <visual>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.8 0.8 0.05" />
+	        </geometry>
+	        <material name="material_red">
+		        <color rgba="1 0.1 0.1 1.0" />
+	        </material>
+	    </visual>
+	</static_object>
+
  
 	<light name="light1" type="directional">
 		<position xyz="-2.0 -2.0 2.0" />
