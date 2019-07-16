@@ -58,8 +58,8 @@ string ROBOT_HAPTIC_ROTATION_MATRIX_KEY = "sai2::Sigma7Applications::simulation:
 string ROBOT_HAPTIC_FRAME_TRANSLATION_KEY = "sai2::Sigma7Applications::simulation::robot_haptic_frame_translation_guidance";
 string GUIDANCE_LINE_FIRST_POINT = "sai2::Sigma7Applications::simulation::line_guidance_first_point";
 string GUIDANCE_LINE_SECOND_POINT = "sai2::Sigma7Applications::simulation::line_guidance_second_point";
-string GUIDANCE_PLANE_ENABLE = "sai2::Sigma7Applications::simulation::_enable_plane_guidance_3D";
-string GUIDANCE_LINE_ENABLE = "sai2::Sigma7Applications::simulation::_enable_line_guidance_3D";
+const string GUIDANCE_PLANE_ENABLE = "sai2::Sigma7Applications::simulation::_enable_plane_guidance_3D";
+// const string GUIDANCE_LINE_ENABLE = "sai2::Sigma7Applications::simulation::_enable_line_guidance_3D";
 string GUIDANCE_SCALE_FACTOR = "sai2::Sigma7Applications::simulation::_guidance_scale_factor";
 
 // - read (from haptic device command input):
@@ -138,18 +138,14 @@ int main() {
 
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
-	VectorXd initial_q(robot->dof());
-	initial_q << 0.0, -30.0, 0.0, 60.0, 0.0, -90.0, 0.0;
-	initial_q *= M_PI/180.0;
-	//initial_q << -0.12, -1.57, 0, -2.24, -1.21, 2.76, 0.66;
-
+	
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
 	sim->setCollisionRestitution(0);
-	sim->setCoeffFrictionStatic(0.2);
+	sim->setCoeffFrictionStatic(0.6);
 
 	// read joint positions, velocities, update model
-	//sim->setJointPositions(robot_name, initial_q);
+	// sim->setJointPositions(robot_name, initial_q);
 	sim->getJointPositions(robot_name, robot->_q);
 	sim->getJointVelocities(robot_name, robot->_dq);
 	robot->updateKinematics();
@@ -340,6 +336,18 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	// variables used to make only one plane and one line at a time
 	int plane_counter = 1;
 	int line_counter = 1;
+	plane_point.setZero();
+	normal_vec.setZero();
+	_Rotation_Matrix_DeviceToRobot.setIdentity();
+	_Translation_DeviceToRobot.setZero();
+
+	redis_client.set(GUIDANCE_PLANE_ENABLE, to_string(1));
+	redis_client.set(GUIDANCE_SCALE_FACTOR, to_string(2.0));
+	redis_client.setEigenMatrixJSON(GUIDANCE_PLANE_POINT_KEY, plane_point);
+	redis_client.setEigenMatrixJSON(GUIDANCE_PLANE_NORMAL_KEY, normal_vec);
+	redis_client.setEigenMatrixJSON(ROBOT_HAPTIC_ROTATION_MATRIX_KEY, _Rotation_Matrix_DeviceToRobot);
+	redis_client.setEigenMatrixJSON(ROBOT_HAPTIC_FRAME_TRANSLATION_KEY, _Translation_DeviceToRobot);
+
 
 	while (fSimulationRunning) {
 		fTimerDidSleep = timer.waitForNextLoop();
@@ -350,7 +358,7 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 		/********************************** Plane and Line Visualization **********************************/
 
 		plane_enable = stoi(redis_client.get(GUIDANCE_PLANE_ENABLE));
-		line_enable = stoi(redis_client.get(GUIDANCE_LINE_ENABLE));;
+		// line_enable = stoi(redis_client.get(GUIDANCE_LINE_ENABLE));;
 
 		// // if there's no plane or line (destructor was used) then make a new one
 		// if (plane_object == NULL) {

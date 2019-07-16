@@ -37,7 +37,7 @@ const string robot_name = "Kuka-IIWA";
 const string proxy_file = "../resources/02-HapticDeviceDriver/proxy6d.urdf";
 const string proxy_name = "proxy6d";
 
-bool admittance_control = true;
+bool admittance_control = false;
 
 //////////////////////////////////////////////////////////////////////
 // //Definition of the state machine for the robot controller
@@ -310,10 +310,10 @@ int main() {
 	teleop_task->setDeviceCenter(HomePos_op, HomeRot_op);
 
 	// Force feedback stiffness proxy parameters
-	double proxy_position_impedance = 3000.0;
-	double proxy_position_damping = 5.0;
+	double proxy_position_impedance = 1400.0;
+	double proxy_position_damping = 8.0;
 	double proxy_orientation_impedance = 20.0;
-	double proxy_orientation_damping = 0.1;
+	double proxy_orientation_damping = 0.5;
 	teleop_task->setVirtualProxyGains (proxy_position_impedance, proxy_position_damping,
 									   proxy_orientation_impedance, proxy_orientation_damping);
 	// Set haptic controllers parameters
@@ -387,8 +387,8 @@ int main() {
 
 	teleop_task->_haptic_feedback_from_proxy = false;
 	teleop_task->_filter_on = false;
-	double fc_force=0.02;
-	double fc_moment=0.02;
+	double fc_force=0.04;
+	double fc_moment=0.04;
 	teleop_task->setFilterCutOffFreq(fc_force, fc_moment);
 	bool gripper_state=false;
 
@@ -557,17 +557,21 @@ int main() {
 		else //// Impedance controller of the robot ////
 		{
 			//Compute haptic commands
-		teleop_task->_haptic_feedback_from_proxy = false; // If set to true, the force feedback is computed from a stiffness/damping proxy.
-	    teleop_task->_filter_on = false;
+		teleop_task->_haptic_feedback_from_proxy = true; // If set to true, the force feedback is computed from a stiffness/damping proxy.
+	    teleop_task->_filter_on = true;
 
 		// Force feedback from force sensor
-		//teleop_task->updateSensedForce(f_proxy_simulation); // BUG... - Computed through chai3D Finger Proxy algorithm
-		teleop_task->updateSensedForce(f_task_sensed);
-		teleop_task->_send_haptic_feedback = true;
-		
-		// Force feedback from proxy
-		// teleop_task->updateVirtualProxyPositionVelocity(pos_proxy_model, vel_trans_proxy_model, rot_proxy_model, vel_rot_proxy_model);
+		// teleop_task->updateSensedForce(f_task_sensed);
 		// teleop_task->_send_haptic_feedback = true;
+
+		//teleop_task->updateSensedForce(f_proxy_simulation); // BUG... - Computed through chai3D Finger Proxy algorithm
+		
+		
+		// Force feedback from proxy - URDF: Collision should only be between the proxy and the environment
+		teleop_task->updateVirtualProxyPositionVelocity(pos_proxy_model, vel_trans_proxy_model, rot_proxy_model, vel_rot_proxy_model);
+		teleop_task->_send_haptic_feedback = true;
+
+		// cout << "force_des" << teleop_task->_commanded_force_device<< endl;
 
 		// if (f_task_sensed.norm()>=0.000001)
 		// {

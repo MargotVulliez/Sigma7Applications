@@ -60,6 +60,10 @@
                 <sphere radius="0.03" />
             </geometry>
         </collision>
+
+        <!-- Enable collision when using proxy computation -->
+
+        
     </link>
     <joint name="j0" type="prismatic">
         <parent link="base_link" />

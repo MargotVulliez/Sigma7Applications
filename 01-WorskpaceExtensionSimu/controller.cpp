@@ -5,6 +5,7 @@
 // This haptic control class is dedicated to Force Dimension haptic devices and directly manages
 // the devices thanks to the chai3D library. The robot behavior can be simulated by running
 // simviz.cpp or the real robot can be controlled with its own driver.
+// The workspace extension algorithm is tested with this application in translation and rotation.
 
 #include "Sai2Model.h"
 #include "redis/RedisClient.h"

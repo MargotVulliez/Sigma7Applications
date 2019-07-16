@@ -1,4 +1,6 @@
-// This example simulates the remote control of a Kuka iiwa interacting with a rigid box.
+// This example simulates the remote control of a Kuka iiwa interacting with different rigid
+// objects (boxe, hole, edge, complex shape). The workspace extension algorithm is tested
+// with this application in translation and rotation.
 // The robot is equipped with a spherical or rectangular tool. The haptic interaction are
 // estimated or sensed in the virtual task environment. This simulation runs with the
 // application controller (state machine, haptic device's and remote robot's controllers).

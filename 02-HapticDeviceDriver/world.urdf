@@ -4,17 +4,17 @@
 <world name="demo_world" gravity="0.0 0.0 0.0">
 
 	<robot name="Kuka-IIWA">
-		<model dir="../resources/01-WorskpaceExtensionSimu" path="kuka_iiwa.urdf" name="kuka_iiwa" />
+		<model dir="../resources/02-HapticDeviceDriver" path="kuka_iiwa.urdf" name="kuka_iiwa" />
 		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	</robot>
 
 <!-- 	<robot name="proxy">
-		<model dir="../resources/01-WorskpaceExtensionSimu" path="proxy.urdf" name="proxy" />
+		<model dir="../resources/02-HapticDeviceDriver" path="proxy.urdf" name="proxy" />
 		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	</robot> -->
 
 	<robot name="proxy6d">
-		<model dir="../resources/01-WorskpaceExtensionSimu" path="proxy6d.urdf" name="proxy6d" />
+		<model dir="../resources/02-HapticDeviceDriver" path="proxy6d.urdf" name="proxy6d" />
 		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	</robot>
 

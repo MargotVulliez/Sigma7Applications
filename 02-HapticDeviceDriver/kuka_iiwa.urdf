@@ -164,12 +164,19 @@
                 <box size="0.03 0.03 0.03"/>
             </geometry>
         </visual>
-        <collision>
+<!--         <collision>
             <origin xyz="0 0 0.04" rpy="0 0 0" />
             <geometry>
                 <box size="0.03 0.03 0.03"/>
             </geometry>
-        </collision>
+        </collision> --> 
+
+<!-- Remove collision when using proxy computation -->
+
+
+
+
+
 
 <!--         <collision>
             <origin xyz="0 0 0" rpy="0 0 0" />
