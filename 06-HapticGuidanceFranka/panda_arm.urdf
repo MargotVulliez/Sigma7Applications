@@ -9,7 +9,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../Model/meshes_panda/link0.obj"/>
+          <mesh filename="../../../Model/meshes_panda/visual/link0.obj"/>
         </geometry>
       </visual>
 <!--       <collision>
@@ -26,7 +26,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../Model/meshes_panda/link1.obj"/>
+          <mesh filename="../../../Model/meshes_panda/visual/link1.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -43,7 +43,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../Model/meshes_panda/link2.obj"/>
+          <mesh filename="../../../Model/meshes_panda/visual/link2.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -60,7 +60,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../Model/meshes_panda/link3.obj"/>
+          <mesh filename="../../../Model/meshes_panda/visual/link3.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -77,7 +77,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../Model/meshes_panda/link4.obj"/>
+          <mesh filename="../../../Model/meshes_panda/visual/link4.obj"/>
         </geometry>
       </visual>
 <!--       <collision>
@@ -94,7 +94,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../Model/meshes_panda/link5.obj"/>
+          <mesh filename="../../../Model/meshes_panda/visual/link5.obj"/>
         </geometry>
       </visual>
 <!--       <collision>
@@ -111,7 +111,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../Model/meshes_panda/link6.obj"/>
+          <mesh filename="../../../Model/meshes_panda/visual/link6.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -128,14 +128,24 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../Model/meshes_panda/link7.obj"/>
+          <mesh filename="../../../Model/meshes_panda/visual/link7.obj"/>
         </geometry>
       </visual>
-      <!-- <collision>
+      <visual>
+        <origin xyz="0 0 0.1" rpy="0 0 0" />
         <geometry>
-          <mesh filename="../../../Model/meshes/collision/link7.obj"/>
+          <sphere radius="0.04" />
         </geometry>
-      </collision> -->
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.1" rpy="0 0 0" />
+        <geometry>
+          <sphere radius="0.04" />
+        </geometry>
+      </collision>
+
+
+
     </link>
     <joint name="joint1" type="revolute">
       <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.8973" soft_upper_limit="2.8973"/>

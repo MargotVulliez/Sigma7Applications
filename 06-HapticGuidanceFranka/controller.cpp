@@ -182,7 +182,7 @@ int main() {
 
 	//// PosOriTask controller (manage the control in position of the iiwa robot) ////
 	const string link_name = "link7";
-	const Vector3d pos_in_link = Vector3d(0.0,0.0,0.04); /////////////////////////////////Define center of tool in end-effector frame
+	const Vector3d pos_in_link = Vector3d(0.0,0.0,0.1); /////////////////////////////////Define center of tool in end-effector frame
 	auto posori_task = new Sai2Primitives::PosOriTask(robot, link_name, pos_in_link);
 	VectorXd posori_task_torques = VectorXd::Zero(robot->dof());
 
@@ -213,7 +213,7 @@ int main() {
 	auto teleop_task = new Sai2Primitives::OpenLoopTeleop(handler, device_number, centerPos_rob, centerRot_rob, transformDev_Rob);
 
 	 //Task scaling factors
-	double Ks=2.0;
+	double Ks=2.5;
 	double KsR=1.0;
 	teleop_task->setScalingFactors(Ks, KsR);
 	redis_client.set(GUIDANCE_SCALE_FACTOR, to_string(Ks));
@@ -285,6 +285,13 @@ int main() {
 	bool fTimerDidSleep = true;
 	double start_time = timer.elapsedTime(); //secs
 
+	// Add device workspace virtual limits 
+	teleop_task->_add_workspace_virtual_limit=true;
+	double device_workspace_radius_limit = 0.045;
+	double device_workspace_angle_limit = 90*M_PI/180.0;
+	teleop_task->setWorkspaceLimits(device_workspace_radius_limit, device_workspace_angle_limit);
+	
+
 	// Set-up guidance parameters
 	teleop_task->_enable_plane_guidance_3D = false;
 	Eigen::Vector3d guidance_point;
@@ -293,6 +300,7 @@ int main() {
 	guidance_point = HomePos_op;
 	guidance_normal_vec << 0, 1, 1;
 	Vector3d robot_haptic_frame_translation = centerPos_rob - HomePos_op;
+
 
 	// teleop_task->setPlane(guidance_point, guidance_normal_vec);
 
@@ -338,7 +346,7 @@ int main() {
 	Eigen::Vector3d force_one;
 	Eigen::Vector3d force_two;
 	Eigen::Vector3d force_three;
-	Eigen::Vector3d force_normal;
+	Eigen::Vector3d force_mean;
 
 	point_one.setZero();
 	point_two.setZero();
@@ -348,7 +356,7 @@ int main() {
 	force_one.setZero();
 	force_two.setZero();
 	force_three.setZero();
-	force_normal.setZero();
+	force_mean.setZero();
 
 	/////////////////////////////// cyclic ////////////////////////////////////////
 	while (runloop) {
@@ -509,7 +517,7 @@ int main() {
 				// cout << point_one << endl;
 
 				// grab force
-				force_one = teleop_task->_commanded_force_device;
+				force_one = -teleop_task->_commanded_force_device;
 
 			} else if(point_counter == 2) {
 
@@ -523,7 +531,7 @@ int main() {
 				// cout << point_two << endl;
 
 				// grab force
-				force_two = teleop_task->_commanded_force_device;
+				force_two = -teleop_task->_commanded_force_device;
 
 			} else if(point_counter == 3) {
 
@@ -559,17 +567,17 @@ int main() {
 				// posori_task->_desired_orientation = plane_rotation_matrix;
 				
 				// grab force
-				force_three = teleop_task->_commanded_force_device;
+				force_three = -teleop_task->_commanded_force_device;
 
 				// compute the normal force (base frame or ee frame)
-				force_normal = guidance_normal_vec * (((force_one + force_two + force_three) / 3.0).dot(guidance_normal_vec));
-				posori_task->_desired_force = transformDev_Rob.transpose() * force_normal;
+				force_mean << 0.0, 0.0, (force_one.dot(guidance_normal_vec) + force_two.dot(guidance_normal_vec) + force_three.dot(guidance_normal_vec))/3.0;
+				posori_task->_desired_force = force_mean;
 
-				// cout << "desired force " << force_normal.tranpose() << endl;
+				cout << "desired force " << force_mean[2] << endl;
 
 				// set up hybrid control using normal vector in robot space
 				Eigen::Vector3d guidance_normal_vec_robot = transformDev_Rob.transpose() * guidance_normal_vec;
-				posori_task->setForceAxis(-guidance_normal_vec_robot);
+				posori_task->setForceAxis(guidance_normal_vec_robot);
 
 				state = PLANE_CONTROL;
 

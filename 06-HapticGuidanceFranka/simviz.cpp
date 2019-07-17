@@ -142,7 +142,7 @@ int main() {
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
 	sim->setCollisionRestitution(0);
-	sim->setCoeffFrictionStatic(0.6);
+	sim->setCoeffFrictionStatic(0.2);
 
 	// read joint positions, velocities, update model
 	// sim->setJointPositions(robot_name, initial_q);
