@@ -58,8 +58,8 @@ int restart_cycle = 1;
 const string REMOTE_ENABLED_KEY = "sai2::Sigma7Applications::sensors::remote_enabled";
 const string RESTART_CYCLE_KEY = "sai2::Sigma7Applications::sensors::restart_cycle";
 
-// const bool flag_simulation = false;
-const bool flag_simulation = true;
+const bool flag_simulation = false;
+// const bool flag_simulation = true;
 
 string JOINT_ANGLES_KEY  = "sai2::Sigma7Applications::sensors::q";
 string JOINT_VELOCITIES_KEY = "sai2::Sigma7Applications::sensors::dq";
@@ -120,23 +120,23 @@ int main() {
 
 	if (!flag_simulation)
 	{
-		JOINT_TORQUES_COMMANDED_KEY = "sai2::FrankaPanda::actuators::fgc";
-		JOINT_TORQUES_SENSED_KEY = "sai2::FrankaPanda::sensors::torques";
+		JOINT_TORQUES_COMMANDED_KEY = "sai2::FrankaPanda::Bonnie::actuators::fgc";
+		JOINT_TORQUES_SENSED_KEY = "sai2::FrankaPanda::Bonnie::sensors::torques";
 
-		JOINT_ANGLES_KEY  = "sai2::FrankaPanda::sensors::q";
-		JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::sensors::dq";
-		MASSMATRIX_KEY = "sai2::FrankaPanda::sensors::model::massmatrix";
-		CORIOLIS_KEY = "sai2::FrankaPanda::sensors::model::coriolis";
-		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::sensors::model::robot_gravity";	
+		JOINT_ANGLES_KEY  = "sai2::FrankaPanda::Bonnie::sensors::q";
+		JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::Bonnie::sensors::dq";
+		MASSMATRIX_KEY = "sai2::FrankaPanda::Bonnie::sensors::model::massmatrix";
+		CORIOLIS_KEY = "sai2::FrankaPanda::Bonnie::sensors::model::coriolis";
+		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::Bonnie::sensors::model::robot_gravity";      
 			
-		FORCE_SENSED_KEY= "sai2::optoforceSensor::6Dsensor::force";	
+		FORCE_SENSED_KEY= "sai2::ATIGamma_Sensor::force_torque";	
 	}
 
 	/////////////////////////////// init ////////////////////////////////////////
 	Eigen::Affine3d robot_pose_in_world = Affine3d::Identity();
 	robot_pose_in_world.translation() = Vector3d(-0.06, 0.57, 0.0);
-	robot_pose_in_world.linear() = Matrix3d::Identity ();
-	// robot_pose_in_world.linear() = AngleAxisd(-1.0864675, Vector3d::UnitZ()).toRotationMatrix();
+	//robot_pose_in_world.linear() = Matrix3d::Identity ();
+	robot_pose_in_world.linear() = AngleAxisd(-45*M_PI/180.0, Vector3d::UnitZ()).toRotationMatrix();
 	
 	// start redis client
 	auto redis_client = RedisClient();
@@ -166,13 +166,14 @@ int main() {
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	MatrixXd N_prec = MatrixXd::Identity(robot->dof(), robot->dof());
 	VectorXd joint_task_torques = VectorXd::Zero(robot->dof());
-	joint_task->_kp = 100.0;
-	joint_task->_kv = 14.0;
+	joint_task->_kp = 250.0;
+	joint_task->_kv = 18.0;
 
 	// Define goal position according to the desired posture ///////////////////////////////////////////////////////////////////////////////////////////////// 
 	VectorXd goal_posture(robot->dof());
-	//goal_posture << 2.22268, 1.14805, -1.90333, -2.21937, -0.645465, 1.70329, -0.074406;
-	goal_posture = joint_task->_current_position;
+	// goal_posture <<1.03499, -0.535584, 0.0377364, -2.08948, -0.0189764, 1.59062, 0.906026;
+	goal_posture << 0.917648,-0.281587,0.127892,-1.93048,-0.0188945,1.67564,0.729007;
+	//goal_posture = joint_task->_current_position;
 	joint_task->_desired_position = goal_posture;
 
 	// Velocity saturation and/or interpolation for real robot application
@@ -182,7 +183,7 @@ int main() {
 
 	//// PosOriTask controller (manage the control in position of the iiwa robot) ////
 	const string link_name = "link7";
-	const Vector3d pos_in_link = Vector3d(0.0,0.0,0.1); /////////////////////////////////Define center of tool in end-effector frame
+	const Vector3d pos_in_link = Vector3d(0.0,0.0,0.157); /////////////////////////////////Define center of tool in end-effector frame
 	auto posori_task = new Sai2Primitives::PosOriTask(robot, link_name, pos_in_link);
 	VectorXd posori_task_torques = VectorXd::Zero(robot->dof());
 
@@ -195,6 +196,13 @@ int main() {
 	posori_task->_kv_pos = 14.0;
 	posori_task->_kp_ori = 200.0;
 	posori_task->_kv_ori = 15.0;
+
+	posori_task->_kp_force = 4.0;
+	posori_task->_kv_force = 10.0;
+	posori_task->_ki_force = 0.7;
+	// posori_task->_kp_moment = 1.0;
+	// posori_task->_kv_moment = 10.0;
+	// posori_task->_ki_moment = 0.7;
 	
 	// position of robot in world
 	Eigen::Vector3d centerPos_rob = posori_task->_current_position;
@@ -237,9 +245,9 @@ int main() {
 	Red_factor_rot << 1/20.0, 0.0, 0.0,
 						  0.0, 1/20.0, 0.0,
 						  0.0, 0.0, 1/20.0;
-	Red_factor_trans << 1/2.0, 0.0, 0.0,
-						  0.0, 1/2.0, 0.0,
-						  0.0, 0.0, 1/2.0;
+	Red_factor_trans << 1/1.8, 0.0, 0.0,
+						  0.0, 1/1.8, 0.0,
+						  0.0, 0.0, 1/1.8;
 	double kp_robot_trans_velocity = 10.0;
 	double ki_robot_trans_velocity = 0.0;
 	double kp_robot_rot_velocity =10.0;
@@ -259,15 +267,25 @@ int main() {
 	Vector3d vel_rot_rob_model = Vector3d::Zero(); // Model linear and angular velocities in robot frame
 	Vector3d vel_trans_rob_model = Vector3d::Zero();
 	VectorXd f_task_sensed = VectorXd::Zero(6);
+
+	double hand_mass = 0; /////////////////////////////////////////////////////////////////////////
+	Vector3d hand_com = Vector3d::Zero();
+	VectorXd force_bias_global = VectorXd::Zero(6);
+	if(!flag_simulation)
+	{
+		//force_bias_global << ;
+		hand_mass = 0.2;
+		hand_com = Vector3d(0.0, 0.0,  0.147);
+	}
 	
 	// write inital task force and sensed torques in redis
 	redis_client.setEigenMatrixJSON(FORCE_SENSED_KEY,f_task_sensed);
 	redis_client.setEigenMatrixJSON(JOINT_TORQUES_SENSED_KEY,torques_sensed);
 
 	teleop_task->_haptic_feedback_from_proxy = false;
-	teleop_task->_filter_on = true;
-	double fc_force=0.04;
-	double fc_moment=0.04;
+	teleop_task->_filter_on = false;
+	double fc_force=0.06;
+	double fc_moment=0.06;
 	teleop_task->setFilterCutOffFreq(fc_force, fc_moment);
 
 	//Enable user switch
@@ -381,12 +399,12 @@ int main() {
 	{
 		robot->updateKinematics();
 		robot->_M = redis_client.getEigenMatrixJSON(MASSMATRIX_KEY);
-		if(inertia_regularization)
-		{
-			robot->_M(4,4) += 0.07;
-			robot->_M(5,5) += 0.07;
-			robot->_M(6,6) += 0.07;
-		}
+		// if(inertia_regularization)
+		// {
+		// 	robot->_M(4,4) += 0.07;
+		// 	robot->_M(5,5) += 0.07;
+		// 	robot->_M(6,6) += 0.07;
+		// }
 		robot->_M_inv = robot->_M.inverse();
 
 		coriolis_torques = redis_client.getEigenMatrixJSON(CORIOLIS_KEY);
@@ -401,7 +419,24 @@ int main() {
 
 	// read force sensor data
 	f_task_sensed = redis_client.getEigenMatrixJSON(FORCE_SENSED_KEY);
-	//
+
+	
+	if(!flag_simulation)
+	{
+		// Remove sensor bias
+		f_task_sensed -= force_bias_global;
+		// Adjust sensed force with effector mass
+		Matrix3d R_sensor = Matrix3d::Identity();
+		robot->rotation(R_sensor, "link7");
+		f_task_sensed.head(3) += hand_mass * R_sensor.transpose() * Vector3d(0,0,-9.81);
+		f_task_sensed.tail(3) = Vector3d::Zero();
+		f_task_sensed.head(3) = R_sensor*f_task_sensed.head(3);
+		f_task_sensed = -f_task_sensed;
+	}
+
+	// cout << "force sensed to feedback" << f_task_sensed << endl;
+
+	// read torque sensors
 	torques_sensed = redis_client.getEigenMatrixJSON(JOINT_TORQUES_SENSED_KEY);
 
 	// read renabling/disabling teleoperation brush
@@ -418,6 +453,12 @@ int main() {
 		N_prec.setIdentity();
 		joint_task->updateTaskModel(N_prec);
 		// compute torques
+
+		for(int i=4 ; i<7 ; i++)
+		{
+			robot->_M(i,i) += 0.07;
+		}
+
 		joint_task->computeTorques(joint_task_torques);
 		command_torques = joint_task_torques + coriolis_torques;
 
@@ -453,7 +494,7 @@ int main() {
 
 		//Compute haptic commands
 		teleop_task->_haptic_feedback_from_proxy = false; // If set to true, the force feedback is computed from a stiffness/damping proxy.
-	    teleop_task->_filter_on = true;
+	    teleop_task->_filter_on = false;
 
 		teleop_task->updateSensedForce(f_task_sensed);
 		teleop_task->_send_haptic_feedback = true;
@@ -471,6 +512,12 @@ int main() {
 		N_prec = posori_task->_N;
 		joint_task->updateTaskModel(N_prec);
 		// compute torques
+
+		for(int i=3 ; i<6 ; i++)
+		{
+			posori_task->_Lambda(i,i) += 0.1;
+		}
+
 		posori_task->computeTorques(posori_task_torques);
 		joint_task->computeTorques(joint_task_torques);
 
@@ -496,7 +543,7 @@ int main() {
 		{
 			// joint controller to maintin robot in current position
 			joint_task->reInitializeTask();
-			joint_task->_desired_position = robot->_q;
+			// joint_task->_desired_position = robot->_q;
 
 			// set current haptic device position
 			teleop_task->setDeviceCenter(teleop_task->_current_position_device, teleop_task->_current_rotation_device);
@@ -553,7 +600,7 @@ int main() {
 					guidance_normal_vec = -guidance_normal_vec;
 				}
 
-				// cout << "normal vec: " << guidance_normal_vec << endl;
+				cout << "normal vec: " << guidance_normal_vec << endl;
 
 				teleop_task->setPlane(point_three, guidance_normal_vec);
 
@@ -570,8 +617,9 @@ int main() {
 				force_three = -teleop_task->_commanded_force_device;
 
 				// compute the normal force (base frame or ee frame)
-				force_mean << 0.0, 0.0, (force_one.dot(guidance_normal_vec) + force_two.dot(guidance_normal_vec) + force_three.dot(guidance_normal_vec))/3.0;
-				posori_task->_desired_force = force_mean;
+				// force_mean << 0.0, 0.0, (force_one.dot(guidance_normal_vec) + force_two.dot(guidance_normal_vec) + force_three.dot(guidance_normal_vec))/3.0;
+				force_mean << 0.0, 0.0, -10.0;
+				posori_task->_desired_force = force_mean;				
 
 				cout << "desired force " << force_mean[2] << endl;
 
@@ -601,7 +649,7 @@ int main() {
 
 		//Compute haptic commands
 		teleop_task->_haptic_feedback_from_proxy = false; // If set to true, the force feedback is computed from a stiffness/damping proxy.
-	    teleop_task->_filter_on = true;
+	    teleop_task->_filter_on = false;
 
 		teleop_task->updateSensedForce(f_task_sensed);
 		teleop_task->_send_haptic_feedback = true;
@@ -621,6 +669,10 @@ int main() {
 		N_prec = posori_task->_N;
 		joint_task->updateTaskModel(N_prec);
 		// compute torques
+		for(int i=3 ; i<6 ; i++)
+		{
+			posori_task->_Lambda(i,i) += 0.1;
+		}
 		posori_task->computeTorques(posori_task_torques);
 		joint_task->computeTorques(joint_task_torques);
 
@@ -630,7 +682,7 @@ int main() {
 		{
 			// joint controller to maintin robot in current position
 			joint_task->reInitializeTask();
-			joint_task->_desired_position = robot->_q;
+			// joint_task->_desired_position = robot->_q;
 
 			// set current haptic device position
 			teleop_task->setDeviceCenter(teleop_task->_current_position_device, teleop_task->_current_rotation_device);
@@ -649,6 +701,12 @@ int main() {
 		N_prec.setIdentity();
 		joint_task->updateTaskModel(N_prec);
 		// compute torques
+
+		for(int i =4 ; i<7 ; i++)
+		{
+			robot->_M(i,i) += 0.07;
+		}
+
 		joint_task->computeTorques(joint_task_torques);
 		command_torques = joint_task_torques + coriolis_torques;
 

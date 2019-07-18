@@ -146,19 +146,19 @@
                 <mesh filename="../../../Model/meshes_iiwa/link6.obj" scale="1 1 1" />
             </geometry>
         </visual>
-        <!-- <visual>
+    <visual>
             <origin xyz="0 0 0.04" rpy="0 0 0"/>
             <geometry>
-                <sphere radius="0.03" />
+                <sphere radius="0.02" />
             </geometry>
-        </visual> -->
-        <!-- <collision>
+        </visual>
+     <collision>
             <origin xyz="0 0 0.04" rpy="0 0 0"/>
             <geometry>
-                <sphere radius="0.03" />
+                <sphere radius="0.02" />
             </geometry>
-        </collision> -->
-        <visual> 
+        </collision>
+     <!--    <visual> 
             <origin xyz="0 0 0.04" rpy="0 0 0" />
             <geometry>
                 <box size="0.03 0.03 0.03"/>
@@ -169,7 +169,7 @@
             <geometry>
                 <box size="0.03 0.03 0.03"/>
             </geometry>
-        </collision>
+        </collision> -->
 
 <!--         <collision>
             <origin xyz="0 0 0" rpy="0 0 0" />

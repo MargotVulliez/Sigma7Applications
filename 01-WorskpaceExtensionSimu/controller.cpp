@@ -20,6 +20,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 
 #include <signal.h>
 bool runloop = true;
@@ -45,7 +46,7 @@ cHapticDeviceHandler* handler;
 cGenericHapticDevicePtr hapticDevice;
 bool device_started = false;
 
-bool admittance_control = true;
+bool admittance_control = false;
 
 //////////////////////////////////////////////////////////////////////
 // //Definition of the state machine for the robot controller
@@ -212,7 +213,7 @@ int main() {
 
 	//// PosOriTask controller for proxy (manage the control in position of the avatar) ////
 	const string proxy_link = "link5";//proxy end-effector
-	const Vector3d poxy_pos_in_link = Vector3d(0.0,0.0,0.0); //Position of the control point in the end-effector frame
+	const Vector3d poxy_pos_in_link = Vector3d(0.0,0.0,0.04); //Position of the control point in the end-effector frame
 	auto posori_task_proxy = new Sai2Primitives::PosOriTask(avatar, proxy_link, poxy_pos_in_link);
 	VectorXd posori_proxy_torques = VectorXd::Zero(avatar->dof());
 	MatrixXd N_prec_proxy = MatrixXd::Identity(avatar->dof(), avatar->dof());
@@ -244,7 +245,7 @@ int main() {
 	double Rmax_env = 0.2;
 	double Thetamax_dev = 20*M_PI/180.0; // in [rad]
 	double Thetamax_env = 40*M_PI/180.0; ///////////////////////////////////////////////////
-	double Fdrift_perc = 200.0/100.0; ///////////////////////////////////////////////////////
+	double Fdrift_perc = 50.0/100.0; ///////////////////////////////////////////////////////
 	redis_client.set(DRIFT_PERC_FORCE_KEY, to_string(Fdrift_perc));
 
 	teleop_task->setWorkspaceSize(Rmax_dev, Rmax_env, Thetamax_dev, Thetamax_env);
@@ -317,8 +318,8 @@ int main() {
 
 	teleop_task->_haptic_feedback_from_proxy = false;
 	teleop_task->_filter_on = false;
-	double fc_force=0.02;
-	double fc_moment=0.02;
+	double fc_force=0.04;
+	double fc_moment=0.04;
 	teleop_task->setFilterCutOffFreq(fc_force, fc_moment);
 
 	// Initialize haptic device if Sigma.7
@@ -337,6 +338,11 @@ int main() {
 	double dt = 0;
 	bool fTimerDidSleep = true;
 	double start_time = timer.elapsedTime(); //secs
+
+	// logging
+	fstream logger;
+	logger.open("log.csv", std::ios::out);
+	logger << "time, Ks, x_device, y_device, z_device, Vx_drift, Vy_drift, Vz_drift, Fx_drift, Fy_drift, Fz_drift" << endl;
 
 	/////////////////////////////// cyclic ////////////////////////////////////////
 	while (runloop) {
@@ -392,7 +398,6 @@ int main() {
 		N_prec_proxy.setIdentity();
 		posori_task_proxy->updateTaskModel(N_prec_proxy);
 		posori_task_proxy->computeTorques(posori_proxy_torques);
-
 
 		// update tasks model and priority 
 		N_prec.setIdentity();
@@ -499,14 +504,33 @@ int main() {
 		//  	teleop_task->_send_haptic_feedback = false;
 		//  }
 
-	    teleop_task->computeHapticCommands3d(pos_rob);
+	    //teleop_task->computeHapticCommands3d(pos_rob);
 		// teleop_task->computeHapticCommands6d(pos_rob, rot_rob);
+
+		teleop_task->computeHapticCommandsWorkspaceExtension3d(pos_rob);
 		//teleop_task->computeHapticCommandsWorkspaceExtension6d(pos_rob, rot_rob);
-		// teleop_task->computeHapticCommandsWorkspaceExtension3d(pos_rob);
 		
 		//Send set position and velocity from haptic device to simulation for finger proxy calculation of chai3D
 		// command_trans_velocity = teleop_task->_vel_trans_rob;
 		// command_position = pos_rob;
+
+
+		if (controller_counter % 33 == 0) {
+			logger << time
+				<< ", " << teleop_task->_scaling_factor_trans
+				<< ", " << teleop_task->_current_position_device[0]
+				<< ", " << teleop_task->_current_position_device[1]
+				<< ", " << teleop_task->_current_position_device[2]
+				<< ", " << teleop_task->_drift_trans_velocity[0]
+				<< ", " << teleop_task->_drift_trans_velocity[1]
+				<< ", " << teleop_task->_drift_trans_velocity[2]
+				<< ", " << teleop_task->_drift_force[0]
+				<< ", " << teleop_task->_drift_force[1]
+				<< ", " << teleop_task->_drift_force[2]
+				<< "\n";
+		}
+
+
 		}
 		
 		// set goal position
@@ -657,6 +681,8 @@ int main() {
 	prev_time = current_time;
 	controller_counter++;
 	}
+
+	logger.close();
 
 	command_torques.setZero(robot->dof());
 	redis_client.setEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY, command_torques);

@@ -345,7 +345,7 @@ void simulation(Sai2Model::Sai2Model* robot,Sai2Model::Sai2Model* avatar, Simula
 	auto force_sensor = new ForceSensorSim(robot_name, link_name, transform_in_link, robot);
 	Vector3d sensed_force = Vector3d::Zero();
 	Vector3d sensed_moment = Vector3d::Zero();
-	force_sensor->removeSpike(5.0);
+	// force_sensor->removeSpike(5.0);
 	// force_sensor->enableFilter(0.02);
 
 	// logging

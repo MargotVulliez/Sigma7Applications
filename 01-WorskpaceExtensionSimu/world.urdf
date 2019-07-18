@@ -42,7 +42,7 @@
 	    <collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
-	            <box size="0.4 0.4 0.2" />
+	            <box size="0.45 0.45 0.1" />
 	        </geometry>
 	        <!-- <geometry>
 	            <mesh filename="../../Model/part.obj" scale="1 1 1" />
@@ -54,7 +54,7 @@
 	            <mesh filename="../../Model/part.obj" scale="1 1 1" />
 	        </geometry> -->
 	        <geometry>
-	            <box size="0.4 0.4 0.2" />
+	            <box size="0.45 0.45 0.1" />
 	        </geometry>
 	        <material name="material_red">
 		        <color rgba="1 0.1 0.1 1.0" />

@@ -48,13 +48,13 @@
             <mass value="0.000001" />
             <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
         </inertial>
-        <visual>
+ <!--        <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
                 <box size="0.03 0.03 0.03"/>
             </geometry>
         </visual>
- <!--    <collision>
+     <collision>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
                 <box size="0.03 0.03 0.03"/>
@@ -64,6 +64,7 @@
             <color rgba="1 0.1 0.1 1.0" />
         </material> -->
     </link>
+    
     <joint name="j0" type="prismatic">
         <parent link="base_link" />
         <child link="link0" />

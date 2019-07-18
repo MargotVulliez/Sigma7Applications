@@ -30,7 +30,6 @@ using namespace Eigen;
 using namespace chai3d;
 
 const string world_file = "../resources/01-WorskpaceExtensionSimu/world.urdf";
-// const string robot_file = "../resources/01-WorskpaceExtensionSimu/kuka_iiwa_dremel.urdf";
 const string robot_file = "../resources/01-WorskpaceExtensionSimu/kuka_iiwa.urdf";
 const string robot_name = "Kuka-IIWA";
 
@@ -150,7 +149,7 @@ int main() {
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
 	sim->setCollisionRestitution(0);
-	sim->setCoeffFrictionStatic(0.3);
+	sim->setCoeffFrictionStatic(0.2);
 
 	// read joint positions, velocities, update model robot
 	sim->setJointPositions(robot_name, initial_q);
@@ -347,20 +346,20 @@ void simulation(Sai2Model::Sai2Model* robot,Sai2Model::Sai2Model* avatar, Simula
 	auto force_sensor = new ForceSensorSim(robot_name, link_name, transform_in_link, robot);
 	Vector3d sensed_force = Vector3d::Zero();
 	Vector3d sensed_moment = Vector3d::Zero();
-	force_sensor->removeSpike(5.0);
+	// force_sensor->removeSpike(5.0);
 	// force_sensor->enableFilter(0.02);
 
 	// logging
-	fstream logger;
-	logger.open("log.csv", std::ios::out);
-	logger << "time, force, torque, tx, ty, tz" << endl;
+	// fstream logger;
+	// logger.open("log.csv", std::ios::out);
+	// logger << "time, force, torque, tx, ty, tz" << endl;
+	
 	// Create proxy computation
 	// auto proxy = new chai3d::cAlgorithmFingerProxy();
 	// proxy->setProxyRadius(0.01);
 	// robot->position(pos_rob_model, link_name, pos_in_link);
 	// pos_rob_model_chai = convertEigenToChaiVector(pos_rob_model);
 	// proxy->initialize(graphics->_world, pos_rob_model_chai);
-
 
 	// Initialize Finger Proxy algorithm
 	// robot->updateKinematics();
@@ -436,15 +435,15 @@ void simulation(Sai2Model::Sai2Model* robot,Sai2Model::Sai2Model* avatar, Simula
 		redis_client.setEigenMatrixJSON(FORCE_SENSED_KEY,f_task);
 
 
-		if (simulation_counter % 33 == 0) {
-			logger << sim->_world->m_time
-				<< ", " << sensed_force.norm()
-				<< ", " << sensed_moment.norm()
-				<< ", " << sensed_moment[0]
-				<< ", " << sensed_moment[1]
-				<< ", " << sensed_moment[2]
-				<< "\n";
-		}
+		// if (simulation_counter % 33 == 0) {
+		// 	logger << sim->_world->m_time
+		// 		<< ", " << sensed_force.norm()
+		// 		<< ", " << sensed_moment.norm()
+		// 		<< ", " << sensed_moment[0]
+		// 		<< ", " << sensed_moment[1]
+		// 		<< ", " << sensed_moment[2]
+		// 		<< "\n";
+		// }
 
 		// // Compute haptic feedback from proxy
 		// if (proxy_computation==1)
@@ -490,7 +489,8 @@ void simulation(Sai2Model::Sai2Model* robot,Sai2Model::Sai2Model* avatar, Simula
 		simulation_counter++;
 	}
 
-	logger.close();
+	// logger.close();
+	
 	double end_time = timer.elapsedTime();
 	std::cout << "\n";
 	std::cout << "Simulation Loop run time  : " << end_time << " seconds\n";
