@@ -137,7 +137,7 @@ int main() {
 	// position of robot in world
 	Affine3d robot_pose_in_world = Affine3d::Identity();
 	robot_pose_in_world.translation() = Vector3d(0, 0.0, 0.0);
-	robot_pose_in_world.linear() = AngleAxisd(0.0, Vector3d::UnitZ()).toRotationMatrix();
+	robot_pose_in_world.linear() = AngleAxisd(M_PI, Vector3d::UnitZ()).toRotationMatrix();
 
 	// start redis client
 	auto redis_client = RedisClient();
@@ -245,11 +245,12 @@ int main() {
 	double Rmax_env = 0.2;
 	double Thetamax_dev = 20*M_PI/180.0; // in [rad]
 	double Thetamax_env = 40*M_PI/180.0; ///////////////////////////////////////////////////
-	double Fdrift_perc = 50.0/100.0; ///////////////////////////////////////////////////////
+	double Fdrift_perc = 60.0/100.0; ///////////////////////////////////////////////////////
+	double Vdrift_perc = 30.0/100;
 	redis_client.set(DRIFT_PERC_FORCE_KEY, to_string(Fdrift_perc));
 
 	teleop_task->setWorkspaceSize(Rmax_dev, Rmax_env, Thetamax_dev, Thetamax_env);
-	teleop_task->setForceNoticeableDiff(Fdrift_perc);
+	teleop_task->setNoticeableDiff(Fdrift_perc, Vdrift_perc);
 
 	// Center of the haptic device workspace
 	Vector3d HomePos_op;
@@ -342,7 +343,7 @@ int main() {
 	// logging
 	fstream logger;
 	logger.open("log.csv", std::ios::out);
-	logger << "time, Ks, x_device, y_device, z_device, Vx_drift, Vy_drift, Vz_drift, Fx_drift, Fy_drift, Fz_drift" << endl;
+	logger << "time, Ks, x_device, y_device, z_device, Vx_drift, Vy_drift, Vz_drift, Fx_drift, Fy_drift, Fz_drift, center_drift_x, center_drift_y, center_drift_z" << endl;
 
 	/////////////////////////////// cyclic ////////////////////////////////////////
 	while (runloop) {
@@ -527,6 +528,9 @@ int main() {
 				<< ", " << teleop_task->_drift_force[0]
 				<< ", " << teleop_task->_drift_force[1]
 				<< ", " << teleop_task->_drift_force[2]
+				<< ", " << teleop_task->_center_position_robot_drift[0]
+				<< ", " << teleop_task->_center_position_robot_drift[1]
+				<< ", " << teleop_task->_center_position_robot_drift[2]
 				<< "\n";
 		}
 

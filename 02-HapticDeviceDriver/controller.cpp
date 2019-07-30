@@ -8,7 +8,6 @@
 #include "Sai2Model.h"
 #include "redis/RedisClient.h"
 #include "timer/LoopTimer.h"
-#include "chai3d.h" //To manage haptic device control, inputs, outputs
 
 // Include task primitives from 'sai2-primitives'
 #include "tasks/JointTask.h"
@@ -26,7 +25,6 @@ void sighandler(int sig)
 
 using namespace std;
 using namespace Eigen;
-using namespace chai3d;
 
 //// Define robots ////
 const string robot_file = "../resources/02-HapticDeviceDriver/kuka_iiwa.urdf";
@@ -151,38 +149,6 @@ vector<string> DEVICE_SENSED_TORQUE_KEYS = {
 	"sai2::ChaiHapticDevice::device1::sensors::sensed_torque",
 	};
 
-//// Declaration of internal functions for Chai-Eigen transformations////
-cVector3d convertEigenToChaiVector( Eigen::Vector3d a_vec )
-{
-    double x = a_vec(0);
-    double y = a_vec(1);
-    double z = a_vec(2);
-    return cVector3d(x,y,z);
-}
-
-Eigen::Vector3d convertChaiToEigenVector( cVector3d a_vec )
-{
-    double x = a_vec.x();
-    double y = a_vec.y();
-    double z = a_vec.z();
-    return Eigen::Vector3d(x,y,z);
-}
-
-cMatrix3d convertEigenToChaiRotation( Eigen::Matrix3d a_mat )
-{
-    return cMatrix3d( a_mat(0,0), a_mat(0,1), a_mat(0,2), a_mat(1,0), a_mat(1,1), a_mat(1,2), a_mat(2,0), a_mat(2,1), a_mat(2,2) );
-}
-
-Eigen::Matrix3d convertChaiToEigenMatrix( cMatrix3d a_mat )
-{
-    Eigen::Matrix3d asdf;
-    asdf << a_mat(0,0), a_mat(0,1), a_mat(0,2),
-            a_mat(1,0), a_mat(1,1), a_mat(1,2),
-            a_mat(2,0), a_mat(2,1), a_mat(2,2);
-
-    return asdf;
-}
-
 /////////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -221,8 +187,8 @@ int main() {
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	MatrixXd N_prec = MatrixXd::Identity(robot->dof(), robot->dof());
 	VectorXd joint_task_torques = VectorXd::Zero(robot->dof());
-	joint_task->_kp = 10.0;
-	joint_task->_kv = 5.0;
+	joint_task->_kp = 200.0;
+	joint_task->_kv = 15.0;
 	VectorXd command_torques = VectorXd::Zero(robot->dof());
 
 	// Define goal position according to the desired posture ///////////////////////////////////////////////////////////////////////////////////////////////// 
@@ -284,7 +250,6 @@ int main() {
 
 	//// Open loop teleoperation haptic controller ////
 	Matrix3d transformDev_Rob = robot_pose_in_world.linear();
-	int device_number=0;
 	auto teleop_task = new Sai2Primitives::HapticController(centerPos_rob, centerRot_rob, transformDev_Rob);
 	//Task scaling factors
 	double Ks=1.0;
@@ -296,11 +261,11 @@ int main() {
 	double Rmax_env = 0.2;
 	double Thetamax_dev = 20*M_PI/180.0; // in [rad]
 	double Thetamax_env = 40*M_PI/180.0; ///////////////////////////////////////////////////
-	double Fdrift_perc = 200.0/100.0; ///////////////////////////////////////////////////////
+	double Fdrift_perc = 60.0/100.0; ///////////////////////////////////////////////////////
+	double Vdrift_perc = 30.0/100;
 	redis_client.set(DRIFT_PERC_FORCE_KEY, to_string(Fdrift_perc));
-
 	teleop_task->setWorkspaceSize(Rmax_dev, Rmax_env, Thetamax_dev, Thetamax_env);
-	teleop_task->setForceNoticeableDiff(Fdrift_perc);
+	teleop_task->setNoticeableDiff(Fdrift_perc, Vdrift_perc);
 
 	// Center of the haptic device workspace
 	Vector3d HomePos_op;
@@ -428,6 +393,7 @@ int main() {
 	robot->linearVelocity(vel_trans_rob_model, link_name, pos_in_link);
 	robot->rotation(rot_rob_model, link_name);
 	robot->angularVelocity(vel_rot_rob_model, link_name);
+	teleop_task->updateSensedRobotPositionVelocity(pos_rob_model, vel_trans_rob_model, rot_rob_model, vel_rot_rob_model);
 
 	// Update position and orientation of the avatar from the model
 	avatar->position(pos_proxy_model, proxy_link, poxy_pos_in_link);
@@ -538,7 +504,6 @@ int main() {
 		if (admittance_control) //// Admittance controller of the robot ////
 		{
 		// Force feedback from velocity PI in admittance-type scheme
-		teleop_task->updateSensedRobotPositionVelocity(pos_rob_model, vel_trans_rob_model, rot_rob_model, vel_rot_rob_model);
 
 		teleop_task->computeHapticCommandsAdmittance3d(desired_trans_velocity_robot);
 
