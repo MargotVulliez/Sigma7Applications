@@ -1,4 +1,7 @@
-// This example tests the haptic device driver and the open-loop bilateral teleoperation controller.
+// This application applies the haptic unified controller with a closed-loop surface-Surface alignment done
+// autonomously (Zero moment - autonomous_aligment=true) or driven through the haptic torque commands and a
+// normal closed-loop force control from the desired haptic force. It simulates the interaction with an
+// inclined plane or a sphere (change in world file).
 
 #include "Sai2Model.h"
 #include "redis/RedisClient.h"
@@ -40,6 +43,8 @@ unsigned long long controller_counter = 0;
 const bool inertia_regularization = true;
 
 const bool flag_simulation = true;
+
+const bool autonomous_aligment = true;
 
 int remote_enabled = 1;
 int restart_cycle = 0;
@@ -603,12 +608,18 @@ int main() {
 						 						posori_task->_sigma_force, posori_task->_sigma_moment);
 		
 		//Compute haptic commands
-		//teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
-		//													posori_task->_desired_force, posori_task->_desired_moment);
-		
-		teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
+		if (autonomous_aligment)
+		{
+			teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
 															posori_task->_desired_force, desired_torque_robot);
 	
+		}
+		else
+		{
+			teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
+															posori_task->_desired_force, posori_task->_desired_moment);	
+		}
+		
 
 		// update model and priority
 		N_prec.setIdentity();
