@@ -213,8 +213,8 @@ int main() {
 	posori_task->_ki_ori = 0.0;
 
 	posori_task->_kp_force = 1.5;
-	posori_task->_kv_force = 20.0;
-	posori_task->_ki_force = 0.8;
+	posori_task->_kv_force = 25.0;
+	posori_task->_ki_force = 0.7;
 	posori_task->_kp_moment = 20.0;
 	posori_task->_kv_moment = 2.0;
 	posori_task->_ki_moment = 10.0;
@@ -253,18 +253,18 @@ int main() {
 									   proxy_orientation_impedance, proxy_orientation_damping);
 
 	double force_guidance_position_impedance = 2000.0;
-	double force_guidance_orientation_impedance = 40.0;
+	double force_guidance_orientation_impedance = 50.0;
 	double force_guidance_position_damping = 5.0;
-	double force_guidance_orientation_damping = 0.5;
+	double force_guidance_orientation_damping = 0.1;
 	teleop_task->setVirtualGuidanceGains (force_guidance_position_impedance, force_guidance_position_damping,
 									force_guidance_orientation_impedance, force_guidance_orientation_damping);	
 
 	// Set haptic controllers parameters
 	Matrix3d Red_factor_rot = Matrix3d::Identity();
 	Matrix3d Red_factor_trans = Matrix3d::Identity();
-	Red_factor_rot << 1/20.0, 0.0, 0.0,
-						  0.0, 1/20.0, 0.0,
-						  0.0, 0.0, 1/20.0;
+	Red_factor_rot << 1/10.0, 0.0, 0.0,
+						  0.0, 1/10.0, 0.0,
+						  0.0, 0.0, 1/10.0;
 	Red_factor_trans << 1/1.8, 0.0, 0.0,
 						  0.0, 1/1.8, 0.0,
 						  0.0, 0.0, 1/1.8;
