@@ -6,8 +6,6 @@
 #include <dynamics3d.h>
 #include "redis/RedisClient.h"
 #include "timer/LoopTimer.h"
-#include "haptic_tasks/OpenLoopTeleop.h"
-#include "chai3d.h"
 
 #include <GLFW/glfw3.h> //must be loaded after loading opengl/glew
 
@@ -25,25 +23,14 @@ using namespace std;
 using namespace Eigen;
 using namespace chai3d;
 
-const string world_file = "../resources/05-HapticDeviceGuidance/world.urdf";
-const string robot_file = "../resources/05-HapticDeviceGuidance/kuka_iiwa.urdf";
-const string robot_name = "Kuka-IIWA";
+const string world_file = "../resources/07-UnifiedHapticControlSurfaceAlignment/world.urdf";
+const string robot_file = "../resources/07-UnifiedHapticControlSurfaceAlignment/panda_arm.urdf";
+const string robot_name = "panda";
 const string camera_name = "camera";
-const string link_name = "link6"; //robot end-effector
-Affine3d transform_in_link = Affine3d::Identity();
-
-cVector3d convertEigenToChaiVector( Eigen::Vector3d a_vec )
-{
-    double x = a_vec(0);
-    double y = a_vec(1);
-    double z = a_vec(2);
-    return cVector3d(x,y,z);
-}
-
-cMatrix3d convertEigenToChaiRotation( Eigen::Matrix3d a_mat )
-{
-    return cMatrix3d( a_mat(0,0), a_mat(0,1), a_mat(0,2), a_mat(1,0), a_mat(1,1), a_mat(1,2), a_mat(2,0), a_mat(2,1), a_mat(2,2) );
-}
+const string link_name = "link7"; //robot end-effector
+// Set sensor frame transform in end-effector frame
+Affine3d sensor_transform_in_link = Affine3d::Identity();
+const Vector3d sensor_pos_in_link = Eigen::Vector3d(0.0,0.0,0.117);
 
 VectorXd f_task = VectorXd::Zero(6);
 
@@ -52,36 +39,14 @@ VectorXd f_task = VectorXd::Zero(6);
 string JOINT_ANGLES_KEY  = "sai2::Sigma7Applications::sensors::q";
 string JOINT_VELOCITIES_KEY  = "sai2::Sigma7Applications::sensors::dq";
 string FORCE_SENSED_KEY = "sai2::Sigma7Applications::sensors::force_task_sensed";
-string GUIDANCE_PLANE_NORMAL_KEY = "sai2::Sigma7Applications::simulation::guidance_plane_normal_vec";
-string GUIDANCE_PLANE_POINT_KEY = "sai2::Sigma7Applications::simulation::guidance_plane_point";
-string ROBOT_HAPTIC_ROTATION_MATRIX_KEY = "sai2::Sigma7Applications::simulation::robot_haptic_rotation_matrix_guidance";
-string ROBOT_HAPTIC_FRAME_TRANSLATION_KEY = "sai2::Sigma7Applications::simulation::robot_haptic_frame_translation_guidance";
-string GUIDANCE_LINE_FIRST_POINT = "sai2::Sigma7Applications::simulation::line_guidance_first_point";
-string GUIDANCE_LINE_SECOND_POINT = "sai2::Sigma7Applications::simulation::line_guidance_second_point";
-string GUIDANCE_PLANE_ENABLE = "sai2::Sigma7Applications::simulation::_enable_plane_guidance_3D";
-string GUIDANCE_LINE_ENABLE = "sai2::Sigma7Applications::simulation::_enable_line_guidance_3D";
-string GUIDANCE_SCALE_FACTOR = "sai2::Sigma7Applications::simulation::_guidance_scale_factor";
 
 // - read (from haptic device command input):
 string JOINT_TORQUES_COMMANDED_KEY = "sai2::Sigma7Applications::actuators::torque_joint_robot";
-
-// initialize variables that are redis keys
-Eigen::Vector3d point_one = Eigen::Vector3d::Zero();							// first point defining the line
-Eigen::Vector3d point_two = Eigen::Vector3d::Zero();							// second point defining the line
-Eigen::Matrix3d _Rotation_Matrix_DeviceToRobot = Eigen::Matrix3d::Identity(); 	// rotation matrix between haptic global and robot global
-Eigen::Vector3d _Translation_DeviceToRobot = Eigen::Vector3d::Zero(); 			// translation between device to robot home positions
-Eigen::Vector3d normal_vec = Eigen::Vector3d::Zero();							// plane normal vector
-Eigen::Vector3d plane_point = Eigen::Vector3d::Zero();							// plane origin (initial end-effector position) Eigen
-int plane_enable = 0;															// controls plane visualization
-int line_enable = 0;															// controls line visualization
-int scale_factor = 1;															// scale factor from haptic to robot workspace
 
 RedisClient redis_client;
 
 // create graphics object
 auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
-auto line_object = new chai3d::cShapeLine();
-auto plane_object = new chai3d::cMesh();
 
 // simulation function prototype
 void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim);
@@ -108,7 +73,6 @@ bool fRotPanTilt = false;
 bool fOnOffRemote = false;
 int k=0;
 
-// const bool flag_simulation = false;
 const bool flag_simulation = true;
 
 int main() {
@@ -116,11 +80,14 @@ int main() {
 	cout << "Keyboard Options:" << endl << endl;
     cout << "[1] - Enable-Disable remote task" << endl;
 
-	if(!flag_simulation)
-	{
-		// JOINT_ANGLES_KEY = "sai2::FrankaPanda::sensors::q";
-		// JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::sensors::dq";
-	}
+	// if(!flag_simulation)
+	// {
+	// 	JOINT_TORQUES_COMMANDED_KEY = "sai2::FrankaPanda::Bonnie::actuators::fgc";
+	// 	JOINT_ANGLES_KEY  = "sai2::FrankaPanda::Bonnie::sensors::q";
+	// 	JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::Bonnie::sensors::dq";
+			
+	// 	FORCE_SENSED_KEY= "sai2::ATIGamma_Sensor::force_torque";
+	// }
 
 	// start redis client
 	redis_client = RedisClient();
@@ -138,17 +105,13 @@ int main() {
 
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
-	VectorXd initial_q(robot->dof());
-	initial_q << 0.0, -20.0, 0.0, 30.0, 0.0, -50.0, 0.0; 
-	initial_q *= M_PI/180.0;
-
+	
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
 	sim->setCollisionRestitution(0);
 	sim->setCoeffFrictionStatic(0.2);
 
 	// read joint positions, velocities, update model
-	sim->setJointPositions(robot_name, initial_q);
 	sim->getJointPositions(robot_name, robot->_q);
 	sim->getJointVelocities(robot_name, robot->_dq);
 	robot->updateKinematics();
@@ -284,18 +247,6 @@ int main() {
 		graphics->setCameraPose(camera_name, camera_pos, cam_up_axis, camera_lookat);
 		glfwGetCursorPos(window, &last_cursorx, &last_cursory);
 
-	// // Enable/Disable the remote task
-	// 		if (k==0 && fOnOffRemote)
-	// 		{
-	// 			if (0 == remote_enabled) { remote_enabled = 1; }
-	// 			else if (1 == remote_enabled) { remote_enabled = 0; }
-	// 			k++;
-	// 		}
-	// 		if(k!=0)
-	// 		{
-	// 			if (k<=20) {k++; }
-	// 			else {k=0; }
-	// 		}
 	}
 
 	// stop simulation
@@ -320,8 +271,12 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	VectorXd command_torques = VectorXd::Zero(robot->dof());
 	redis_client.setEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 
+	sensor_transform_in_link.translation() = sensor_pos_in_link;
+	//sensor_transform_in_link.linear() = Matrix3d::Identity();
+	
 	// Add force sensor to the end-effector
-	auto force_sensor = new ForceSensorSim(robot_name, link_name, transform_in_link, robot);
+	auto force_sensor = new ForceSensorSim(robot_name, link_name, sensor_transform_in_link, robot);
+	auto fsensor_display = new ForceSensorDisplay(force_sensor, graphics);
 	Vector3d sensed_force = Vector3d::Zero();
 	Vector3d sensed_moment = Vector3d::Zero();
 	// force_sensor->enableFilter(0.016);
@@ -335,154 +290,11 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 
 	unsigned long long simulation_counter = 0;
 
-	// variables used to make only one plane and one line at a time
-	int plane_counter = 1;
-	int line_counter = 1;
-
 	while (fSimulationRunning) {
 		fTimerDidSleep = timer.waitForNextLoop();
 
 		// read arm torques from redis
 		command_torques = redis_client.getEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY);
-
-		/********************************** Plane and Line Visualization **********************************/
-
-		plane_enable = stoi(redis_client.get(GUIDANCE_PLANE_ENABLE));
-		line_enable = stoi(redis_client.get(GUIDANCE_LINE_ENABLE));;
-
-		// if there's no plane or line (destructor was used) then make a new one
-		if (plane_object == NULL) {
-
-			plane_object = new cMesh();
-
-		} else if (line_object == NULL) {
-
-			line_object = new cShapeLine();
-
-		}
-
-		// plane visualization
-		if (plane_enable == 1 && line_enable == 0 && plane_counter == 1) {
-			
-			// local variable initialization for the plane
-			chai3d::cMatrix3d PlaneRotation;	// rotation matrix from world to guidance plane
-			chai3d::cVector3d PlanePosition;	// plane origin (initial end-effector position) chai 
-			Eigen::Vector3d FloorAxis;			// world plane normal vector
-
-			// read scaling factor from redis
-			scale_factor = stoi(redis_client.get(GUIDANCE_SCALE_FACTOR));
-
-			// read plane normal and plane point from redis
-			normal_vec = redis_client.getEigenMatrixJSON(GUIDANCE_PLANE_NORMAL_KEY);
-			plane_point = redis_client.getEigenMatrixJSON(GUIDANCE_PLANE_POINT_KEY);
-
-			// read haptic to robot translation vector and rotation matrix
-			_Rotation_Matrix_DeviceToRobot = redis_client.getEigenMatrixJSON(ROBOT_HAPTIC_ROTATION_MATRIX_KEY);
-			_Translation_DeviceToRobot = redis_client.getEigenMatrixJSON(ROBOT_HAPTIC_FRAME_TRANSLATION_KEY);
-
-			// define this in the haptic space; normal vector of the floor plane for the virtual plane visualization
-			FloorAxis << 0, 0, 1;
-
-			// get plane and point vectors defined in the haptic space and convert them to the robot space	
-			normal_vec = _Rotation_Matrix_DeviceToRobot.transpose() * normal_vec;	// normal vec in robot space
-			FloorAxis = _Rotation_Matrix_DeviceToRobot.transpose() * FloorAxis;		// floor axis in robot space
-			
-			// Adjust plane point position from device workspace to the robot space (translate and rotate)
-			plane_point = scale_factor * _Rotation_Matrix_DeviceToRobot.transpose() * plane_point + _Translation_DeviceToRobot;
-
-			// plane rotation matrix and position in chai3d vector/matrix form
-			PlaneRotation = convertEigenToChaiRotation((Quaterniond().setFromTwoVectors(FloorAxis, normal_vec)).toRotationMatrix());
-			PlanePosition = convertEigenToChaiVector(plane_point);
-
-			// create the plane, set the color and transparency
-			chai3d::cCreatePlane(plane_object, 3.0, 3.0, PlanePosition, PlaneRotation);
-			plane_object->m_material->setColorf(0.69, 0.93, 0.93);
-			plane_object->setTransparencyLevel(0.3, false, false, false);
-
-			// add the plane to the world
-			graphics->_world->addChild(plane_object);
-
-			// increment the plane counter so we don't break into this statement continuously
-			plane_counter++;
-
-		}
-		// line visualization
-		else if (line_enable == 1 && plane_enable == 0 && line_counter == 1) {
-			
-			// local variable initialization for the line
-			chai3d::cVector3d point_one_chai;	// chai vector for the first point
-			chai3d::cVector3d point_two_chai;	// chai vector for the second point
-			Eigen::Vector3d point_one_scaled;	// point one scaled for better visualization
-			Eigen::Vector3d point_two_scaled;	// point two scaled for better visualization
-			double line_scaling = 10;			// scaling factor for line visualization
-
-			// read scaling factor from redis
-			scale_factor = stoi(redis_client.get(GUIDANCE_SCALE_FACTOR));
-
-			// grab values from redis set in the controller cpp for the two points defining the line
-			point_one = redis_client.getEigenMatrixJSON(GUIDANCE_LINE_FIRST_POINT);
-			point_two = redis_client.getEigenMatrixJSON(GUIDANCE_LINE_SECOND_POINT);
-
-			// read haptic to robot translation vector and rotation matrix
-			_Rotation_Matrix_DeviceToRobot = redis_client.getEigenMatrixJSON(ROBOT_HAPTIC_ROTATION_MATRIX_KEY);
-			_Translation_DeviceToRobot = redis_client.getEigenMatrixJSON(ROBOT_HAPTIC_FRAME_TRANSLATION_KEY);
-
-			// define the points in the robot workspace from the haptic workspace
-			point_one = scale_factor * _Rotation_Matrix_DeviceToRobot * point_one + _Translation_DeviceToRobot;
-			point_two = scale_factor * _Rotation_Matrix_DeviceToRobot * point_two + _Translation_DeviceToRobot;
-
-			// scale these points in the robot workspace for visualization
-			point_one_scaled = line_scaling * (point_one - point_two) + point_one;
-			point_two_scaled = line_scaling * (point_two - point_one) + point_two; 
-
-			// turn the two points into chai vectors
-			point_one_chai = convertEigenToChaiVector(point_one_scaled);
-			point_two_chai = convertEigenToChaiVector(point_two_scaled);
-
-			// create the line using the two scaled chai vectors
-			*line_object = cShapeLine(point_one_chai, point_two_chai);
-
-			// add the line to the world
-			graphics->_world->addChild(line_object);
-
-			line_counter++;
-
-		} else {
-			
-			if (plane_counter > 1 && line_enable == 1) {
-				// reset the counters
-				plane_counter = 1;
-				line_counter++;
-
-				// remove the plane from visualization and make the pointer null
-				plane_object->~cMesh();
-				plane_object = NULL;
-
-			} else if (line_counter > 1 && plane_enable == 1) {
-				// reset the counters
-				plane_counter++;
-				line_counter = 1;
-				// remove the line from visualization and make the pointer null
-				line_object->~cShapeLine();
-				line_object = NULL;
-			}
-
-		} 
-
-		// } else if (line_counter > 1 && plane_enable == 1) {
-			
-		// 	cout << "reset line" << endl;
-		// 	// reset the counters
-		// 	plane_counter = 1;
-		// 	line_counter = 1;
-
-		// 	// remove the line from visualization and make the pointer null
-		// 	line_object->~cShapeLine();
-		// 	line_object = NULL;
-
-		// }
-
-		/******************************** End Plane and Line Visualization *********************************/
 
 		sim->setJointTorques(robot_name, command_torques);
 
@@ -495,7 +307,6 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 		sim->getJointPositions(robot_name, robot->_q);
 		sim->getJointVelocities(robot_name, robot->_dq);
 		robot->updateKinematics();
-
 
 		// write new robot state to redis
 		redis_client.setEigenMatrixJSON(JOINT_ANGLES_KEY, robot->_q);

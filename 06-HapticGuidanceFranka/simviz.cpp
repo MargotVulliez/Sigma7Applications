@@ -6,8 +6,6 @@
 #include <dynamics3d.h>
 #include "redis/RedisClient.h"
 #include "timer/LoopTimer.h"
-#include "haptic_tasks/OpenLoopTeleop.h"
-#include "chai3d.h"
 
 #include <GLFW/glfw3.h> //must be loaded after loading opengl/glew
 
@@ -30,7 +28,9 @@ const string robot_file = "../resources/06-HapticGuidanceFranka/panda_arm.urdf";
 const string robot_name = "panda";
 const string camera_name = "camera";
 const string link_name = "link7"; //robot end-effector
-Affine3d transform_in_link = Affine3d::Identity();
+// Set sensor frame transform in end-effector frame
+Affine3d sensor_transform_in_link = Affine3d::Identity();
+const Vector3d sensor_pos_in_link = Eigen::Vector3d(0.0,0.0,0.117);
 
 cVector3d convertEigenToChaiVector( Eigen::Vector3d a_vec )
 {
@@ -318,11 +318,14 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	VectorXd command_torques = VectorXd::Zero(robot->dof());
 	redis_client.setEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 
+	sensor_transform_in_link.translation() = sensor_pos_in_link;
+	//sensor_transform_in_link.linear() = Matrix3d::Identity();
+	
 	// Add force sensor to the end-effector
-	auto force_sensor = new ForceSensorSim(robot_name, link_name, transform_in_link, robot);
-	Vector3d sensed_force = Vector3d::Zero();
+	auto force_sensor = new ForceSensorSim(robot_name, link_name, sensor_transform_in_link, robot);
+	auto fsensor_display = new ForceSensorDisplay(force_sensor, graphics);Vector3d sensed_force = Vector3d::Zero();
 	Vector3d sensed_moment = Vector3d::Zero();
-	force_sensor->enableFilter(0.016);
+	// force_sensor->enableFilter(0.016);
 
 	// create a timer
 	LoopTimer timer;
