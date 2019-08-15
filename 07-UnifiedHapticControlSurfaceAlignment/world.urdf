@@ -88,9 +88,9 @@
 	</light> -->
 
 	<camera name="camera">
-		<position xyz="-2.0 0.0 2.0" />
+		<position xyz="2.0 0.25  1.0" />
+		<lookat xyz="1.0 0.2 0.7" />
 		<vertical xyz="0.0 0.0 1.0" />
-		<lookat xyz="0.0 0.0 0.8" />
 	</camera>
 
 	<!-- TODO: support stereo specification -->

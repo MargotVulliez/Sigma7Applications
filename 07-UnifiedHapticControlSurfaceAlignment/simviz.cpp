@@ -68,6 +68,7 @@ bool fTransYp = false;
 bool fTransYn = false;
 bool fTransZp = false;
 bool fTransZn = false;
+bool fshowCameraPose = false;
 bool fRotPanTilt = false;
 // flag for enabling/disabling remote task
 bool fOnOffRemote = false;
@@ -97,11 +98,11 @@ int main() {
 	Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
 
-	// create a camera
-	auto camera = new cCamera(graphics->_world);
-	// add the camera to the world
-	graphics->_world->addChild(camera);
-	camera->setUseMultipassTransparency(true);
+	// // create a camera
+	// auto camera = new cCamera(graphics->_world);
+	// // add the camera to the world
+	// graphics->_world->addChild(camera);
+	// camera->setUseMultipassTransparency(true);
 
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
@@ -200,7 +201,7 @@ int main() {
 		Eigen::Vector3d cam_up_axis;
 		// cam_up_axis = camera_vertical;
 		// cam_up_axis.normalize();
-		cam_up_axis << -1.0, 0.0, 1.0; //TODO: there might be a better way to do this
+		cam_up_axis << 0.0, 0.0, 1.0; //TODO: there might be a better way to do this
 		Eigen::Vector3d cam_roll_axis = (camera_lookat - camera_pos).cross(cam_up_axis);
 		cam_roll_axis.normalize();
 		Eigen::Vector3d cam_lookat_axis = camera_lookat;
@@ -230,6 +231,12 @@ int main() {
 		if (fTransZn) {
 			camera_pos = camera_pos - 0.1*cam_depth_axis;
 			camera_lookat = camera_lookat - 0.1*cam_depth_axis;
+		}
+		if (fshowCameraPose) {
+			cout << endl;
+			cout << "camera position : " << camera_pos.transpose() << endl;
+			cout << "camera lookat : " << camera_lookat.transpose() << endl;
+			cout << endl;
 		}
 		if (fRotPanTilt) {
 			// get current cursor position
@@ -372,6 +379,9 @@ void keySelect(GLFWwindow* window, int key, int scancode, int action, int mods)
 		case GLFW_KEY_R:
 			fOnOffRemote = set;
 	        break;
+		case GLFW_KEY_S:
+			fshowCameraPose = set;
+			break;
 		default:
 			break;
 
