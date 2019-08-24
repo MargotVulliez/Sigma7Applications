@@ -82,12 +82,13 @@ set(SIGMA7_APPLICATIONS_COMMON_LIBRARIES
 # add apps
 set (SIGMA7_APPLICATIONS_BINARY_DIR                  ${PROJECT_SOURCE_DIR}/bin)
 
-add_subdirectory(01-WorskpaceExtensionSimu)
-add_subdirectory(02-HapticDeviceDriver)
-add_subdirectory(03-HapticConstruction)
-add_subdirectory(04-HapticDeviceHumanInteraction)
-add_subdirectory(05-HapticDeviceGuidance)
-add_subdirectory(06-HapticGuidanceFranka)
-add_subdirectory(07-UnifiedHapticControlSurfaceAlignment)
-add_subdirectory(08-UnifiedHapticControlDualPlaneExperiment)
+# add_subdirectory(01-WorskpaceExtensionSimu)
+# add_subdirectory(02-HapticDeviceDriver)
+# add_subdirectory(03-HapticConstruction)
+# add_subdirectory(04-HapticDeviceHumanInteraction)
+# add_subdirectory(05-HapticDeviceGuidance)
+# add_subdirectory(06-HapticGuidanceFranka)
+# add_subdirectory(07-UnifiedHapticControlSurfaceAlignment)
+# add_subdirectory(08-UnifiedHapticControlDualPlaneExperiment)
+add_subdirectory(09-passivityTests)
 
