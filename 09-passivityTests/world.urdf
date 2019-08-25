@@ -49,7 +49,7 @@
 	</static_object> -->
 
 	<static_object name="Plane">
-		<origin xyz="0.6 0.0 0.3" rpy="0.0 0.0 0.0" />
+		<origin xyz="0.6 0.0 0.45" rpy="0.0 0.0 0.0" />
 		<collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
@@ -87,7 +87,7 @@
 	</static_object> -->
 
 	<light name="light1" type="directional">
-		<position xyz="-2.0 -2.0 2.0" />
+		<position xyz="2.0 -2.0 2.0" />
 		<lookat xyz="0.0 0.0 0.0" />
 	</light>
 
@@ -107,7 +107,7 @@
 	</light> -->
 
 	<camera name="camera">
-		<position xyz="2.0 0.25  1.0" />
+		<position xyz="2.0 -0.25  1.0" />
 		<lookat xyz="1.0 0.2 0.7" />
 		<vertical xyz="0.0 0.0 1.0" />
 	</camera>
