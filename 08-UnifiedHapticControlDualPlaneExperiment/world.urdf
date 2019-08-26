@@ -29,26 +29,26 @@
 	    </visual>
 	</static_object>
 
-<!--    <static_object name="Plane">
-		<origin xyz="0.2 0.4 0.5" rpy="0.3 0.0 -65*M_PI/180.0" />
+	<static_object name="Plane">
+		<origin xyz="0.6 0.0 0.43" rpy="0.0 0.0 0.0" />
 		<collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
-	            <box size="0.8 0.8 0.03" />
+	            <box size="0.5 1.4 0.04" />
 	        </geometry>
 	    </collision>
 	    <visual>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
-	            <box size="0.8 0.8 0.03" />
+	            <box size="0.5 1.4 0.04" />
 	        </geometry>
-	        <material name="material_red">
-		        <color rgba="1 0.1 0.1 1.0" />
+	        <material name="material_orange">
+		        <color rgba="1.00 0.60 0.20 1.0" />
 	        </material>
 	    </visual>
-	</static_object> -->
+	</static_object>
 
-	<static_object name="Plane">
+	<!-- <static_object name="Plane">
 		<origin xyz="0.4 0.0 0.3" rpy="0.0 0.0 0.0" />
 		<collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
@@ -65,20 +65,20 @@
 		        <color rgba="1.00 0.60 0.20 1.0" />
 	        </material>
 	    </visual>
-	</static_object>
+	</static_object> -->
  
 	<static_object name="Box">
-		<origin xyz="0.4 -0.3 0.38" rpy="0.0 0.0 0.0" />
+		<origin xyz="0.6 0.05 0.45" rpy="0.0 0.0 -0.2" />
 		<collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
-	            <box size="0.2 0.3 0.06" />
+	            <box size="0.4 0.3 0.06" />
 	        </geometry>
 	    </collision>
 	    <visual>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
-	            <box size="0.2 0.3 0.06" />
+	            <box size="0.4 0.3 0.06" />
 	        </geometry>
 	        <material name="material_blue">
 		        <color rgba="0.20 0.47 1.00 1.0" />

@@ -379,7 +379,7 @@ int main() {
 
 	// Add device workspace virtual limits 
 	teleop_task->_add_workspace_virtual_limit=true;
-	double device_workspace_radius_limit = 0.045;
+	double device_workspace_radius_limit = 0.075;
 	double device_workspace_angle_limit = 90*M_PI/180.0;
 	teleop_task->setWorkspaceLimits(device_workspace_radius_limit, device_workspace_angle_limit);
 	
@@ -517,8 +517,8 @@ int main() {
 			teleop_task->HomingTask();
 
 	        
-			// if( remote_enabled==1 && teleop_task->device_homed && gripper_state && (joint_task->_desired_position - joint_task->_current_position).norm() < 0.3)
-			if( (joint_task->_desired_position - joint_task->_current_position).norm() < 0.3)
+			// if( (joint_task->_desired_position - joint_task->_current_position).norm() < 0.3)
+			if( remote_enabled==1 && teleop_task->device_homed && gripper_state && (joint_task->_desired_position - joint_task->_current_position).norm() < 0.3)
 			{
 				cout << "going to haptic task" << endl;
 				
