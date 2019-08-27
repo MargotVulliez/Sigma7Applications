@@ -30,7 +30,7 @@ robot_current_angular_velocity = file[1::, 55:58]
 robot_task_force = file[1::, 58:64]
 
 haptic_position = file[1::, 64:67]
-haptic_velovity = file[1::, 67:70]
+haptic_velocity = file[1::, 67:70]
 haptic_orientation = file[1::, 70:79]
 haptic_angular_velocity = file[1::, 79:82]
 haptic_command_force = file[1::, 82:85]
@@ -44,11 +44,35 @@ R_haptic_robot = file[1::, 103:112]
 sensed_force_robot_frame = file[1::, 112:115]
 sensed_moment_robot_frame = file[1::, 115:118]
 
+bilateral_passivity_alpha_force = file[1::,118]
+bilateral_passivity_alpha_moment = file[1::,119]
+passivity_Rc_force = file[1::,120]
+passivity_Rc_moment = file[1::,121]
+
 time -= time[0]
 
 plt.figure(1)
-plt.plot(sensed_force_robot_frame[:,2])
-plt.plot(-haptic_command_force_plus_passivity[:,2])
+plt.plot(sensed_force_robot_frame)
+plt.plot(-haptic_command_force, '--')
+plt.title("sensed force and haptic force")
+
+plt.figure(2)
+plt.plot(robot_current_position)
+plt.plot(robot_desired_position, '--')
+plt.title("robot desired position and current position")
+
+plt.figure(10)
+plt.plot(haptic_position)
+plt.title("haptic position")
+
+plt.figure(3)
+plt.plot(bilateral_passivity_alpha_force)
+plt.title("passivity_bilateral_damping")
+
+plt.figure(4)
+plt.plot(passivity_Rc_force)
+plt.title("passivity Rc")
+
 
 plt.show()
 

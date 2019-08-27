@@ -43,7 +43,8 @@ unsigned long long controller_counter = 0;
 
 const bool inertia_regularization = true;
 
-const bool flag_simulation = true;
+// const bool flag_simulation = true;
+const bool flag_simulation = false;
 
 const bool autonomous_aligment = true;
 
@@ -162,20 +163,25 @@ const string LOGGING_R_HAPTIC_ROBOT = "sai2::Sigma7Applications::logging::R_robo
 const string LOGGING_SENSED_FORCE_ROBOT_FRAME = "sai2::Sigma7Applications::logging::force_sensed_robot_frame";
 const string LOGGING_SENSED_MOMENT_ROBOT_FRAME = "sai2::Sigma7Applications::logging::moment_sensed_robot_frame";
 
+const string LOGGING_BILATERAL_PASSIVITY_ALPHA_FORCE = "sai2::Sigma7Applications::logging::bilateral_passivity_alpha_force";
+const string LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT = "sai2::Sigma7Applications::logging::bilateral_passivity_alpha_moment";
+const string LOGGING_PASSIVITY_RC_FORCE = "sai2::Sigma7Applications::logging::autonomous_passivity_Rc_force";
+const string LOGGING_PASSIVITY_RC_MOMENT = "sai2::Sigma7Applications::logging::autonomous_passivity_Rc_moment";
+
 /////////////////////////////////////////////////////////////////////////////////
 
 int main() {
 
 	if (!flag_simulation)
 	{
-		JOINT_TORQUES_COMMANDED_KEY = "sai2::FrankaPanda::Bonnie::actuators::fgc";
-		JOINT_TORQUES_SENSED_KEY = "sai2::FrankaPanda::Bonnie::sensors::torques";
+		JOINT_TORQUES_COMMANDED_KEY = "sai2::FrankaPanda::Clyde::actuators::fgc";
+		JOINT_TORQUES_SENSED_KEY = "sai2::FrankaPanda::Clyde::sensors::torques";
 
-		JOINT_ANGLES_KEY  = "sai2::FrankaPanda::Bonnie::sensors::q";
-		JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::Bonnie::sensors::dq";
-		MASSMATRIX_KEY = "sai2::FrankaPanda::Bonnie::sensors::model::massmatrix";
-		CORIOLIS_KEY = "sai2::FrankaPanda::Bonnie::sensors::model::coriolis";
-		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::Bonnie::sensors::model::robot_gravity";      
+		JOINT_ANGLES_KEY  = "sai2::FrankaPanda::Clyde::sensors::q";
+		JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::Clyde::sensors::dq";
+		MASSMATRIX_KEY = "sai2::FrankaPanda::Clyde::sensors::model::massmatrix";
+		CORIOLIS_KEY = "sai2::FrankaPanda::Clyde::sensors::model::coriolis";
+		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::Clyde::sensors::model::robot_gravity";      
 			
 		FORCE_SENSED_KEY= "sai2::ATIGamma_Sensor::force_torque";	
 	}
@@ -222,7 +228,7 @@ int main() {
 	// Define goal position according to the desired posture ///////////////////////////////////////////////////////////////////////////////////////////////// 
 	VectorXd goal_posture(robot->dof());
 	// goal_posture << 0.917648,-0.281587,0.127892,-1.93048,-0.0188945,1.67564,0.729007;
-	goal_posture << -0.0560315,-0.00338795,0.608816,-1.88375,-0.0450848,1.89874,-0.737433;
+	goal_posture << -0.0818928,0.0794155,0.580881,-1.59559,-0.0234656,1.66133,-1.11493;
 	//goal_posture = joint_task->_current_position;
 	joint_task->_desired_position = goal_posture;
 
@@ -249,11 +255,11 @@ int main() {
 	posori_task->_ki_pos = 0.0;
 	posori_task->_ki_ori = 0.0;
 
-	posori_task->_kp_force = 0.9;
+	posori_task->_kp_force = 0.3;
 	posori_task->_kv_force = 5.0;
-	posori_task->_ki_force = 1.5;
-	posori_task->_kp_moment = 1.2;
-	posori_task->_kv_moment = 5.0;
+	posori_task->_ki_force = 0.3;
+	posori_task->_kp_moment = 0.5;
+	posori_task->_kv_moment = 10.0;
 	posori_task->_ki_moment = 1.5;
 	
 	// position of robot in world
@@ -347,8 +353,13 @@ int main() {
 
 	//// passivity observer and controller ////
 	auto passivity_controller = new Sai2Primitives::BilateralPassivityController(posori_task, teleop_task);
-	Vector3d haptic_damping_passivity = Vector3d::Zero();
+	Vector3d haptic_damping_force_passivity = Vector3d::Zero();
+	Vector3d haptic_damping_torque_passivity = Vector3d::Zero();
 	Vector3d command_force_device_plus_damping = Vector3d::Zero();
+
+	double Rc_moment = 0;
+
+	Vector3d haptic_command_torque = Vector3d::Zero();
 
 	//Define end-effector properties
 	double tool_mass = 0; /////////////////////////////////////////////////////////////////////////
@@ -356,8 +367,8 @@ int main() {
 	VectorXd force_bias_global = VectorXd::Zero(6);
 	if(!flag_simulation)
 	{
-		//force_bias_global << ;
-		tool_mass = 0.04;
+		force_bias_global << 0.107568,   -0.0632298,      1.42982,  -0.00369506,    0.0110065, -0.000951872;
+		tool_mass = 0.05;
 		tool_com = Vector3d(0.0, 0.0, 0.0);  //Defined in sensor frame
 	}
 
@@ -461,9 +472,9 @@ int main() {
 	redis_client.addEigenToWrite(LOGGING_HAPTIC_ORIENTATION, teleop_task->_current_rotation_device);
 	redis_client.addEigenToWrite(LOGGING_HAPTIC_ANGVEL, teleop_task->_current_rot_velocity_device);
 	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_FORCE, teleop_task->_commanded_force_device);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE, teleop_task->_commanded_torque_device);
+	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE, haptic_command_torque);
 	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_FORCE_TOTAL, command_force_device_plus_damping);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE_TOTAL, teleop_task->_commanded_torque_device);
+	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE_TOTAL, haptic_command_torque);
 
 	redis_client.addEigenToWrite(LOGGING_R_ROBOT_SENSOR, R_sensor);
 	redis_client.addEigenToWrite(LOGGING_R_HAPTIC_ROBOT, teleop_task->_Rotation_Matrix_DeviceToRobot);
@@ -471,6 +482,12 @@ int main() {
 	redis_client.addEigenToWrite(LOGGING_SENSED_FORCE_ROBOT_FRAME, posori_task->_sensed_force);
 	redis_client.addEigenToWrite(LOGGING_SENSED_MOMENT_ROBOT_FRAME, posori_task->_sensed_moment);
 
+	redis_client.addDoubleToWrite(LOGGING_BILATERAL_PASSIVITY_ALPHA_FORCE, passivity_controller->_alpha_force);
+	redis_client.addDoubleToWrite(LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT, passivity_controller->_alpha_moment);
+	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_FORCE, posori_task->_Rc_inv);
+	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_MOMENT, Rc_moment);
+
+	double t0 = 0;
 
 	/////////////////////////////// cyclic ////////////////////////////////////////
 	while (runloop) 
@@ -564,7 +581,7 @@ int main() {
 			// compute homing haptic device
 			teleop_task->HomingTask();
 
-	        
+
 			if( remote_enabled==1 && teleop_task->device_homed && gripper_state && (joint_task->_desired_position - joint_task->_current_position).norm() < 0.2)
 			{
 				
@@ -573,8 +590,10 @@ int main() {
 				posori_task->reInitializeTask();
 				teleop_task->reInitializeTask();
 
+				posori_task->_desired_orientation << 0, 1, 0, 1, 0, 0, 0, 0, -1;
+
 				joint_task->_kp = 50.0;
-				joint_task->_kv = 10.0;
+				joint_task->_kv = 14.0;
 				joint_task->_ki = 0.0;
 
 				HomePos_op = teleop_task->_current_position_device ;
@@ -620,7 +639,7 @@ int main() {
 			command_torques = posori_task_torques + joint_task_torques + coriolis_torques;
 
 			// compute PO
-			passivity_controller->computePOPCForce(haptic_damping_passivity);
+			passivity_controller->computePOPCForce(haptic_damping_force_passivity);
 
 			// button code to change guidance type
 			if(gripper_state && gripper_state != gripper_state_prev) //if button pushed and no change recorded yet
@@ -634,6 +653,9 @@ int main() {
 
 			if(remote_enabled == 0) //Stop haptic teleoperation
 			{
+				joint_task->_kp = 250.0;
+				joint_task->_kv = 18.0;
+				joint_task->_ki = 0.0;
 				// joint controller to maintain robot in current position
 				joint_task->reInitializeTask();
 				teleop_task->reInitializeTask();
@@ -675,6 +697,7 @@ int main() {
 				passivity_controller->reInitializeTask();
 
 				switch_state_counter = 500;
+				t0 = current_time;
 				state = UNIFIED_CONTROL;			
 			}
 
@@ -686,6 +709,12 @@ int main() {
 		}
 
 		else if(state == UNIFIED_CONTROL) {
+
+			// update model and priority
+			N_prec.setIdentity();
+			posori_task->updateTaskModel(N_prec);
+			N_prec = posori_task->_N;
+			joint_task->updateTaskModel(N_prec);
 			
 			//// Unified haptic controller ////
 
@@ -712,13 +741,12 @@ int main() {
 			// 													posori_task->_desired_force, posori_task->_desired_moment);	
 			// }
 			teleop_task->computeHapticCommandsUnifiedControl3d(posori_task->_desired_position, posori_task->_desired_force);
-			
 
-			// update model and priority
-			N_prec.setIdentity();
-			posori_task->updateTaskModel(N_prec);
-			N_prec = posori_task->_N;
-			joint_task->updateTaskModel(N_prec);
+			// posori_task->_desired_force(2) -= 3.0;
+			// teleop_task->_commanded_force_device(2) += 7.0;
+			
+			// posori_task->_desired_position(0) = 0.3 - 0.15*sin(2*M_PI*0.5*(current_time-t0));
+
 
 			// Adjust mass matrix to increase wrist desired stiffness
 			for(int i=3 ; i<6 ; i++)
@@ -731,7 +759,7 @@ int main() {
 			command_torques = posori_task_torques + joint_task_torques + coriolis_torques;
 
 			// compute PO
-			passivity_controller->computePOPCForce(haptic_damping_passivity);
+			passivity_controller->computePOPCForce(haptic_damping_force_passivity);
 
 			// button code to change guidance type
 			if(gripper_state && gripper_state != gripper_state_prev) //if button pushed and no change recorded yet
@@ -741,9 +769,13 @@ int main() {
 			} else {
 				isPressed = false;
 			}
+			gripper_state_prev = gripper_state;
 
 			if(remote_enabled == 0)
 			{
+				joint_task->_kp = 250.0;
+				joint_task->_kv = 18.0;
+				joint_task->_ki = 0.0;
 				// joint controller to maintain robot in current position
 				joint_task->reInitializeTask();
 				teleop_task->reInitializeTask();
@@ -756,32 +788,20 @@ int main() {
 			}
 			else if(isPressed && switch_state_counter == 0) //If the button is pushed switch to impedance controller
 			{
-				// Reinitialize controllers
-				joint_task->reInitializeTask();
-				posori_task->reInitializeTask();
-				teleop_task->reInitializeTask();
-
-				joint_task->_kp = 50.0;
-				joint_task->_kv = 10.0;
-				joint_task->_ki = 0.0;
-
-				HomePos_op = teleop_task->_current_position_device ;
-				HomeRot_op = teleop_task->_current_rotation_device;
-				teleop_task->setDeviceCenter(HomePos_op, HomeRot_op);
-
-				centerPos_rob = posori_task->_current_position;
-				centerRot_rob = posori_task->_current_orientation;
-				teleop_task->setRobotCenter(centerPos_rob, centerRot_rob);
-
-				teleop_task->_haptic_feedback_from_proxy = false; // If set to true, the force feedback is computed from a stiffness/damping proxy.
-			    teleop_task->_filter_on = true;
-				teleop_task->_send_haptic_feedback = true;
-
-				gripper_state_prev = gripper_state;
-
-				
 				switch_state_counter = 500;
-				state = HAPTIC_CONTROL;			
+
+				joint_task->_kp = 250.0;
+				joint_task->_kv = 18.0;
+				joint_task->_ki = 0.0;
+				// joint controller to maintain robot in current position
+				joint_task->reInitializeTask();
+				teleop_task->reInitializeTask();
+				posori_task->reInitializeTask();
+
+				// set current haptic device position
+				teleop_task->setDeviceCenter(teleop_task->_current_position_device, teleop_task->_current_rotation_device);
+
+				state = MAINTAIN_POSITION;		
 			}
 
 			switch_state_counter--;
@@ -809,7 +829,17 @@ int main() {
 			// Maintain haptic device position
 			teleop_task->HomingTask();
 
-			if (remote_enabled==1 && gripper_state)
+			// button code to change guidance type
+			if(gripper_state && gripper_state != gripper_state_prev) //if button pushed and no change recorded yet
+			{
+				// if button pushed
+				isPressed = true;
+			} else {
+				isPressed = false;
+			}
+			gripper_state_prev = gripper_state;
+
+			if (remote_enabled==1 && isPressed && switch_state_counter == 0)
 			{
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
@@ -841,6 +871,11 @@ int main() {
 
 				state = GOTO_INITIAL_CONFIG;
 			}
+			switch_state_counter--;
+			if(switch_state_counter < 0)
+			{
+				switch_state_counter = 0;
+			}
 		}
 		else
 		{
@@ -850,7 +885,8 @@ int main() {
 
 		
 		// add damping to passivity controller and write all to redis
-		command_force_device_plus_damping = teleop_task->_commanded_force_device + haptic_damping_passivity;
+		command_force_device_plus_damping = teleop_task->_commanded_force_device + haptic_damping_force_passivity;
+		// command_force_device_plus_damping = teleop_task->_commanded_force_device;
 		redis_client.writeAllSetupValues();
 
 		prev_time = current_time;

@@ -30,7 +30,7 @@
 	</static_object>
 
 	<static_object name="Plane">
-		<origin xyz="0.6 0.0 0.43" rpy="0.0 0.0 0.0" />
+		<origin xyz="0.6 0.0 0.5" rpy="0.0 0.0 0.0" />
 		<collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
@@ -47,28 +47,9 @@
 	        </material>
 	    </visual>
 	</static_object>
-
-	<!-- <static_object name="Plane">
-		<origin xyz="0.4 0.0 0.3" rpy="0.0 0.0 0.0" />
-		<collision>
-	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
-	        <geometry>
-	            <box size="0.4 1.4 0.04" />
-	        </geometry>
-	    </collision>
-	    <visual>
-	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
-	        <geometry>
-	            <box size="0.4 1.4 0.04" />
-	        </geometry>
-	        <material name="material_orange">
-		        <color rgba="1.00 0.60 0.20 1.0" />
-	        </material>
-	    </visual>
-	</static_object> -->
  
 	<static_object name="Box">
-		<origin xyz="0.6 0.05 0.45" rpy="0.0 0.0 -0.2" />
+		<origin xyz="0.6 0.1 0.51" rpy="0.0 0.0 0.2" />
 		<collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>

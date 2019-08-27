@@ -9,6 +9,11 @@ import json
 runloop = True
 counter = 0
 
+if len(sys.argv) < 2:
+    print("Give the prefix of the file to write as an argument\n")
+    exit()
+
+
 # handle ctrl-C and close the files
 def signal_handler(signal, frame):
     global runloop
@@ -18,7 +23,8 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # data files
-folder = 'simulation/'
+# folder = 'simulation/'
+folder = 'experiments_bis/'
 
 if not os.path.exists(folder):
     os.makedirs(folder)
@@ -26,12 +32,13 @@ if not os.path.exists(folder):
 # date and time
 timestamp = time.strftime("%x").replace('/','-') + '_' + time.strftime("%X").replace(':','-')
 
-# file names
-# name = "impedance_controller"
-name = "unified_controller"
+# file prefix
+prefix = sys.argv[1]
+# prefix = "impedance_controller"
+# prefix = "unified_controller"
 
 # open files
-file = open(folder + '/' + name + '_' + timestamp,'w')
+file = open(folder + '/' + prefix + '_' + timestamp,'w')
 
 file.write('time\trobot_q[7]\trobot_dq[7]\trobot_command_torques[7]\tdesired_robot_position[3]\tdesired_robot_orientation[3][3]' +\
   'desired_robot_force[3]\tdesired_robot_moment[3]\tcurrent_robot_position[3]\tcurrent_robot_velocity\t' +\
@@ -42,7 +49,8 @@ file.write('time\trobot_q[7]\trobot_dq[7]\trobot_command_torques[7]\tdesired_rob
 
 # open redis server
 r_server = redis.StrictRedis(host='localhost', port=6379, db=0)
-pipe = r_server.pipeline()
+pipe = r_server.pipeline(False)
+# pipe = r_server.pipeline()
 
 # redis keys used in SAI2
 LOGGING_TIME_KEY = "sai2::Sigma7Applications::logging::time";
@@ -74,6 +82,12 @@ LOGGING_R_HAPTIC_ROBOT = "sai2::Sigma7Applications::logging::R_robot_haptic";
 
 LOGGING_SENSED_FORCE_ROBOT_FRAME = "sai2::Sigma7Applications::logging::force_sensed_robot_frame";
 LOGGING_SENSED_MOMENT_ROBOT_FRAME = "sai2::Sigma7Applications::logging::moment_sensed_robot_frame";
+
+LOGGING_BILATERAL_PASSIVITY_ALPHA_FORCE = "sai2::Sigma7Applications::logging::bilateral_passivity_alpha_force";
+LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT = "sai2::Sigma7Applications::logging::bilateral_passivity_alpha_moment";
+LOGGING_PASSIVITY_RC_FORCE = "sai2::Sigma7Applications::logging::autonomous_passivity_Rc_force";
+LOGGING_PASSIVITY_RC_MOMENT = "sai2::Sigma7Applications::logging::autonomous_passivity_Rc_moment";
+
 
 # data logging frequency
 logger_frequency = 100.0  # Hz
@@ -116,11 +130,17 @@ while(runloop):
     pipe.get(LOGGING_SENSED_FORCE_ROBOT_FRAME)
     pipe.get(LOGGING_SENSED_MOMENT_ROBOT_FRAME)
 
+    pipe.get(LOGGING_BILATERAL_PASSIVITY_ALPHA_FORCE)
+    pipe.get(LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT)
+    pipe.get(LOGGING_PASSIVITY_RC_FORCE)
+    pipe.get(LOGGING_PASSIVITY_RC_MOMENT)
+
     responses = pipe.execute()
 
     line = "";
 
     for response in responses:
+        # print(response)
         r_array = np.array(json.loads(response.decode("utf-8")))
 
         if(len(np.shape(r_array)) == 0):

@@ -338,7 +338,7 @@ int main() {
 	VectorXd force_bias_global = VectorXd::Zero(6);
 	if(!flag_simulation)
 	{
-		//force_bias_global << ;
+		force_bias_global << 0.107568,   -0.0632298,      1.42982,  -0.00369506,    0.0110065, -0.000951872;
 		tool_mass = 0.04;
 		tool_com = Vector3d(0.0, 0.0, 0.0);  //Defined in sensor frame
 	}
