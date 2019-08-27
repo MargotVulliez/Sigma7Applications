@@ -24,7 +24,7 @@ using namespace Eigen;
 using namespace chai3d;
 
 const string world_file = "../resources/08-UnifiedHapticControlDualPlaneExperiment/world.urdf";
-const string robot_file = "../resources/08-UnifiedHapticControlDualPlaneExperiment/panda_arm.urdf";
+const string robot_file = "../resources/08-UnifiedHapticControlDualPlaneExperiment/panda_arm_sim.urdf";
 const string robot_name = "panda";
 const string camera_name = "camera";
 const string link_name = "link7"; //robot end-effector
