@@ -400,6 +400,8 @@ int main() {
 	avatar->linearVelocity(vel_trans_proxy_model, proxy_link, poxy_pos_in_link);
 	avatar->rotation(rot_proxy_model, proxy_link);
 	avatar->angularVelocity(vel_rot_proxy_model, proxy_link);
+		
+	teleop_task->updateVirtualProxyPositionVelocity(pos_proxy_model, vel_trans_proxy_model, rot_proxy_model, vel_rot_proxy_model);
 
 	// read force sensor data
 	f_task_sensed = redis_client.getEigenMatrixJSON(FORCE_SENSED_KEY);
@@ -533,7 +535,6 @@ int main() {
 		
 		
 		// Force feedback from proxy - URDF: Collision should only be between the proxy and the environment
-		teleop_task->updateVirtualProxyPositionVelocity(pos_proxy_model, vel_trans_proxy_model, rot_proxy_model, vel_rot_proxy_model);
 		teleop_task->_send_haptic_feedback = true;
 
 		// cout << "force_des" << teleop_task->_commanded_force_device<< endl;

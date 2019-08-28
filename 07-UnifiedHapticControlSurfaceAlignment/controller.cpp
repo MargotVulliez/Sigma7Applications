@@ -44,7 +44,7 @@ const bool inertia_regularization = true;
 
 const bool flag_simulation = true;
 
-const bool autonomous_aligment = true;
+const bool autonomous_aligment = false;
 
 int remote_enabled = 1;
 int restart_cycle = 0;
@@ -610,6 +610,7 @@ int main() {
 		//Compute haptic commands
 		if (autonomous_aligment)
 		{
+			// posori_task->setOpenLoopMomentControl();
 			teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
 															posori_task->_desired_force, desired_torque_robot);
 	
