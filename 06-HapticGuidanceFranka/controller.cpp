@@ -270,10 +270,8 @@ int main() {
 
 	double force_guidance_position_impedance = 2000.0;
 	double force_guidance_orientation_impedance = 50.0;
-	double force_guidance_position_damping = 5.0;
-	double force_guidance_orientation_damping = 0.1;
-	teleop_task->setVirtualGuidanceGains (force_guidance_position_impedance, force_guidance_position_damping,
-									force_guidance_orientation_impedance, force_guidance_orientation_damping);	
+	teleop_task->setVirtualGuidanceGains (force_guidance_position_impedance,
+									force_guidance_orientation_impedance);	
 
 	// Set haptic controllers parameters
 	Matrix3d Red_factor_rot = Matrix3d::Identity();
