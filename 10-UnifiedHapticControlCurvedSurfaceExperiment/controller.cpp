@@ -28,7 +28,7 @@ using namespace std;
 using namespace Eigen;
 
 //// Define robots ////
- const string robot_file = "../resources/08-UnifiedHapticControlDualPlaneExperiment/panda_arm.urdf";
+ const string robot_file = "../resources/10-UnifiedHapticControlCurvedSurfaceExperiment/panda_arm.urdf";
  const string robot_name = "panda";
 
 //////////////////////////////////////////////////////////////////////
@@ -190,8 +190,8 @@ int main() {
 	/////////////////////////////// init ////////////////////////////////////////
 	Eigen::Affine3d robot_pose_in_world = Affine3d::Identity();
 	// robot_pose_in_world.translation() = Vector3d(0, -0.5, 0.0);
-	//robot_pose_in_world.linear() = Matrix3d::Identity ();
-	robot_pose_in_world.linear() = AngleAxisd(0.3010693, Vector3d::UnitZ()).toRotationMatrix();
+	robot_pose_in_world.linear() = Matrix3d::Identity ();
+	//robot_pose_in_world.linear() = AngleAxisd(0.3010693, Vector3d::UnitZ()).toRotationMatrix();
 	Matrix3d R_tool = Matrix3d::Identity(); 
 	
 	// start redis client
@@ -228,9 +228,7 @@ int main() {
 
 	// Define goal position according to the desired posture ///////////////////////////////////////////////////////////////////////////////////////////////// 
 	VectorXd goal_posture(robot->dof());
-	// goal_posture << 0.917648,-0.281587,0.127892,-1.93048,-0.0188945,1.67564,0.729007;
-	goal_posture << -0.0818928,0.0794155,0.580881,-1.59559,-0.0234656,1.66133,-1.11493;
-	// goal_posture << 0.194083,0.592397,0.293649,-1.73701,-0.252896,2.31038,-1.13493;
+	goal_posture << 0.0,-0.7,0.0,-2.2,0.0,1.5,0.0;
 	//goal_posture = joint_task->_current_position;
 	joint_task->_desired_position = goal_posture;
 
