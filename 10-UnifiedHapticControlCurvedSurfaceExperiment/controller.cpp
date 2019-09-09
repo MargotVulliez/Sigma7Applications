@@ -169,6 +169,9 @@ const string LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT = "sai2::Sigma7Application
 const string LOGGING_PASSIVITY_RC_FORCE = "sai2::Sigma7Applications::logging::autonomous_passivity_Rc_force";
 const string LOGGING_PASSIVITY_RC_MOMENT = "sai2::Sigma7Applications::logging::autonomous_passivity_Rc_moment";
 
+const string LOGGING_VIRTUAL_FORCE_ROBOT_FRAME = "sai2::Sigma7Applications::logging::force_virtual_robot_frame";
+const string LOGGING_VIRTUAL_MOMENT_ROBOT_FRAME = "sai2::Sigma7Applications::logging::moment_virtual_robot_frame";
+
 /////////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -493,6 +496,12 @@ int main() {
 	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_FORCE, posori_task->_Rc_inv);
 	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_MOMENT, Rc_moment);
 
+	Vector3d f_virtual_trans_rob_frame = teleop_task->_Rotation_Matrix_DeviceToRobot.transpose() * teleop_task->_f_virtual_trans;
+	Vector3d f_virtual_rot_rob_frame = teleop_task->_Rotation_Matrix_DeviceToRobot.transpose() * teleop_task->_f_virtual_rot;
+
+	redis_client.addEigenToWrite(LOGGING_VIRTUAL_FORCE_ROBOT_FRAME, f_virtual_trans_rob_frame);
+	redis_client.addEigenToWrite(LOGGING_VIRTUAL_MOMENT_ROBOT_FRAME, f_virtual_rot_rob_frame);
+
 	double t0 = 0;
 
 	VectorXd xy_desired = VectorXd::Zero(2);
@@ -707,7 +716,7 @@ int main() {
 				teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
 								 						posori_task->_sigma_force, posori_task->_sigma_moment);
 
-				posori_task->_desired_force = -transformDev_Rob.transpose()*teleop_task->_commanded_force_device;
+				posori_task->_desired_force = -Ks * transformDev_Rob.transpose()*teleop_task->_commanded_force_device;
 				// posori_task->_desired_moment = Vector3d::Zero();
 
 				posori_task->setClosedLoopForceControl();

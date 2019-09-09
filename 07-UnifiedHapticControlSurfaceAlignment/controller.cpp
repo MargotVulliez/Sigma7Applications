@@ -575,7 +575,7 @@ int main() {
 			teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
 							 						posori_task->_sigma_force, posori_task->_sigma_moment);
 
-			posori_task->_desired_force = -transformDev_Rob.transpose()*teleop_task->_commanded_force_device;
+			posori_task->_desired_force = -Ks * transformDev_Rob.transpose()*teleop_task->_commanded_force_device;
 			posori_task->_desired_moment = Vector3d::Zero();
 
 			posori_task->setClosedLoopForceControl();
