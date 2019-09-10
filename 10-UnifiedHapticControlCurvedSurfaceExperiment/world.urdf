@@ -5,7 +5,7 @@
 
 	<robot name="panda">
 		<!-- model node is required -->
-		<model dir="../resources/10-UnifiedHapticControlCurvedSurfaceExperiment" path="panda_arm_sim.urdf" name="panda" />
+		<model dir="../resources/10-UnifiedHapticControlCurvedSurfaceExperiment" path="panda_arm.urdf" name="panda" />
 		<!-- origin node is optional -->
 		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	</robot>

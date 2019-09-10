@@ -27,6 +27,7 @@ const string world_file = "../resources/10-UnifiedHapticControlCurvedSurfaceExpe
 const string robot_file = "../resources/10-UnifiedHapticControlCurvedSurfaceExperiment/panda_arm_sim.urdf";
 const string robot_name = "panda";
 const string camera_name = "camera";
+const string part_name = "CurvedSurface";
 const string link_name = "link7"; //robot end-effector
 // Set sensor frame transform in end-effector frame
 Affine3d sensor_transform_in_link = Affine3d::Identity();
@@ -34,11 +35,22 @@ const Vector3d sensor_pos_in_link = Eigen::Vector3d(0.0,0.0,0.117);
 
 VectorXd f_task = VectorXd::Zero(6);
 
+// Init contact list
+vector<Vector3d> contact_points;
+vector<Vector3d> contact_normals;
+Vector3d contact_point_mean;
+Vector3d contact_normal_mean;
+Vector3d current_position = Vector3d::Zero();
+Vector3d current_normal = Vector3d::Zero();
+
 // redis keys:
 // - write (from simulation or robot sensors):
 string JOINT_ANGLES_KEY  = "sai2::Sigma7Applications::sensors::q";
 string JOINT_VELOCITIES_KEY  = "sai2::Sigma7Applications::sensors::dq";
 string FORCE_SENSED_KEY = "sai2::Sigma7Applications::sensors::force_task_sensed";
+
+string CONTACT_POINT_KEY = "sai2::Sigma7Applications::sensors::contact_point";
+string CONTACT_NORMAL_KEY = "sai2::Sigma7Applications::sensors::contact_normal";
 
 // - read (from haptic device command input):
 string JOINT_TORQUES_COMMANDED_KEY = "sai2::Sigma7Applications::actuators::torque_joint_robot";
@@ -47,6 +59,9 @@ RedisClient redis_client;
 
 // create graphics object
 auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
+
+//Find node of the curved surface in world
+cDynamicBase* object = graphics->_world->getBaseNode(part_name);
 
 // simulation function prototype
 void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim);
@@ -297,6 +312,11 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 
 	unsigned long long simulation_counter = 0;
 
+
+
+
+
+
 	while (fSimulationRunning) {
 		fTimerDidSleep = timer.waitForNextLoop();
 
@@ -327,6 +347,46 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 		f_task << sensed_force, sensed_moment;
 		// write task force in redis
 		redis_client.setEigenMatrixJSON(FORCE_SENSED_KEY,f_task);
+
+	// Get contact list with curved surface
+	contact_points.clear();
+	contact_normals.clear();
+	contact_point_mean.setZero();
+	contact_normal_mean.setZero();
+	int num_contacts = object->m_dynamicContacts->getNumContacts();
+	// only consider if the oject is contacting something
+        if(num_contacts > 0)
+        {
+        	for(int k=0; k < num_contacts; k++)
+	    	{
+	        	cDynamicContact* contact = object->m_dynamicContacts->getContact(k);
+	        	// only consider contacts at the desired link
+                if(contact==NULL || contact->m_dynamicLink->m_name != link_name)
+	        	{
+	        		continue;
+	        	}
+	        	// copy chai3d vector to eigen vector
+	        	for(int l=0; l<3; l++)
+	        	{
+		        	current_position(l) = contact->m_globalPos(l);
+		        	current_normal(l) = contact->m_globalNormal(l);
+	        	}
+	        	contact_points.push_back(current_position);
+	        	contact_normals.push_back(current_normal);
+	        }
+	    }
+	//Compute average contact point and normal
+	    for(int p=0; p < contact_points.size(); p++)
+	    {
+			contact_point_mean += contact_points(p);
+			contact_normal_mean += contact_normals(p);
+	    }
+	    contact_point_mean = contact_point_mean/contact_points.size();
+	    contact_normal_mean = contact_normal_mean/contact_points.size();
+
+	    redis_client.setEigenMatrixJSON(CONTACT_POINT_KEY,contact_point_mean);
+	    redis_client.setEigenMatrixJSON(CONTACT_NORMAL_KEY,contact_normal_mean);
+
 
 		//update last time
 		last_time = curr_time;

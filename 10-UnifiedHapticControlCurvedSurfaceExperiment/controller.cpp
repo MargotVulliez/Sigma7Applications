@@ -47,7 +47,7 @@ const bool inertia_regularization = true;
 const bool flag_simulation = true;
 // const bool flag_simulation = false;
 
-const bool autonomous_aligment = true;
+const bool autonomous_aligment = false;
 
 int remote_enabled = 1;
 int restart_cycle = 0;
@@ -171,6 +171,9 @@ const string LOGGING_PASSIVITY_RC_MOMENT = "sai2::Sigma7Applications::logging::a
 
 const string LOGGING_VIRTUAL_FORCE_ROBOT_FRAME = "sai2::Sigma7Applications::logging::force_virtual_robot_frame";
 const string LOGGING_VIRTUAL_MOMENT_ROBOT_FRAME = "sai2::Sigma7Applications::logging::moment_virtual_robot_frame";
+
+const string LOGGING_POSITION_ERROR_Z = "sai2::Sigma7Applications::logging::z_error";
+const string LOGGING_ANGULAR_ERROR_ORIENT = "sai2::Sigma7Applications::logging::angular_error";
 
 /////////////////////////////////////////////////////////////////////////////////
 
@@ -353,6 +356,9 @@ int main() {
 	Vector3d desired_force_robot = Vector3d::Zero(); // Set force and torque in robot frame
 	Vector3d desired_torque_robot = Vector3d::Zero();
 
+	double orient_angular_error;
+	double error_pos_z;
+
 	Vector3d pos_rob_model = Vector3d::Zero(); // Model position and orientation in robot frame
 	Matrix3d rot_rob_model = Matrix3d::Identity();
 	Vector3d vel_rot_rob_model = Vector3d::Zero(); // Model linear and angular velocities in robot frame
@@ -363,12 +369,11 @@ int main() {
 	//// passivity observer and controller ////
 	auto passivity_controller = new Sai2Primitives::BilateralPassivityController(posori_task, teleop_task);
 	Vector3d haptic_damping_force_passivity = Vector3d::Zero();
-	Vector3d haptic_damping_torque_passivity = Vector3d::Zero();
+	Vector3d haptic_damping_moment_passivity = Vector3d::Zero();
 	Vector3d command_force_device_plus_damping = Vector3d::Zero();
+	Vector3d command_torque_device_plus_damping = Vector3d::Zero();
 
 	double Rc_moment = 0;
-
-	Vector3d haptic_command_torque = Vector3d::Zero();
 
 	//Define end-effector properties
 	double tool_mass = 0; /////////////////////////////////////////////////////////////////////////
@@ -457,7 +462,7 @@ int main() {
 	// objects to write to redis
 	redis_client.addEigenToWrite(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 	redis_client.addEigenToWrite(DEVICE_COMMANDED_FORCE_KEYS[0], command_force_device_plus_damping);
-	redis_client.addEigenToWrite(DEVICE_COMMANDED_TORQUE_KEYS[0], teleop_task->_commanded_torque_device);
+	redis_client.addEigenToWrite(DEVICE_COMMANDED_TORQUE_KEYS[0], command_torque_device_plus_damping);
 	redis_client.addDoubleToWrite(DEVICE_COMMANDED_GRIPPER_FORCE_KEYS[0], teleop_task->_commanded_gripper_force_device);
 
 	// logging to redis
@@ -481,9 +486,9 @@ int main() {
 	redis_client.addEigenToWrite(LOGGING_HAPTIC_ORIENTATION, teleop_task->_current_rotation_device);
 	redis_client.addEigenToWrite(LOGGING_HAPTIC_ANGVEL, teleop_task->_current_rot_velocity_device);
 	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_FORCE, teleop_task->_commanded_force_device);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE, haptic_command_torque);
+	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE, teleop_task->_commanded_torque_device);
 	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_FORCE_TOTAL, command_force_device_plus_damping);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE_TOTAL, haptic_command_torque);
+	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE_TOTAL, command_torque_device_plus_damping);
 
 	redis_client.addEigenToWrite(LOGGING_R_ROBOT_SENSOR, R_sensor);
 	redis_client.addEigenToWrite(LOGGING_R_HAPTIC_ROBOT, teleop_task->_Rotation_Matrix_DeviceToRobot);
@@ -501,6 +506,9 @@ int main() {
 
 	redis_client.addEigenToWrite(LOGGING_VIRTUAL_FORCE_ROBOT_FRAME, f_virtual_trans_rob_frame);
 	redis_client.addEigenToWrite(LOGGING_VIRTUAL_MOMENT_ROBOT_FRAME, f_virtual_rot_rob_frame);
+
+	redis_client.addDoubleToWrite(LOGGING_POSITION_ERROR_Z,	error_pos_z);
+	redis_client.addDoubleToWrite(LOGGING_ANGULAR_ERROR_ORIENT,	orient_angular_error);
 
 	double t0 = 0;
 
@@ -608,12 +616,6 @@ int main() {
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
 				teleop_task->reInitializeTask();
-				// posori_task->_desired_position(2) -= 0.01;
-
-				posori_task->_desired_orientation << 0, 1, 0, 1, 0, 0, 0, 0, -1;
-
-				ori_task->reInitializeTask();
-				ori_task->_desired_orientation << 0, 1, 0, 1, 0, 0, 0, 0, -1;
 
 				joint_task->_kp = 50.0;
 				joint_task->_kv = 14.0;
@@ -623,7 +625,7 @@ int main() {
 				HomeRot_op = teleop_task->_current_rotation_device;
 				teleop_task->setDeviceCenter(HomePos_op, HomeRot_op);
 
-				centerPos_rob = posori_task->_desired_position;
+				centerPos_rob = posori_task->_current_position;
 				centerRot_rob = posori_task->_current_orientation;
 				teleop_task->setRobotCenter(centerPos_rob, centerRot_rob);
 
@@ -632,8 +634,6 @@ int main() {
 				teleop_task->_send_haptic_feedback = true;
 
 				gripper_state_prev = gripper_state;
-
-
 				
 				state = HAPTIC_CONTROL;
 				// state = UNIFIED_CONTROL;
@@ -644,7 +644,8 @@ int main() {
 		{
 			//// Haptic impedance controller ////
 			//Compute haptic commands
-			teleop_task->computeHapticCommands3d(posori_task->_desired_position);
+			teleop_task->computeHapticCommands6d(posori_task->_desired_position, posori_task->_desired_orientation);
+
 
 			// update model and priority (position and joint tasks)
 			N_prec.setIdentity();
@@ -674,6 +675,7 @@ int main() {
 
 			// compute PO
 			passivity_controller->computePOPCForce(haptic_damping_force_passivity);
+			passivity_controller->computePOPCTorque(haptic_damping_moment_passivity);
 
 			// button code to change guidance type
 			if(gripper_state && gripper_state != gripper_state_prev) //if button pushed and no change recorded yet
@@ -710,17 +712,17 @@ int main() {
 
 				// set up unified force control along normal vector in robot space and torque control in the orthogonal space
 				posori_task->setForceAxis(guidance_normal_vec);
-				// posori_task->setAngularMotionAxis(guidance_normal_vec);
+				posori_task->setAngularMotionAxis(guidance_normal_vec);
 
 				// Update the selection matrices for haptic controller
 				teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
 								 						posori_task->_sigma_force, posori_task->_sigma_moment);
 
 				posori_task->_desired_force = -Ks * transformDev_Rob.transpose()*teleop_task->_commanded_force_device;
-				// posori_task->_desired_moment = Vector3d::Zero();
+				posori_task->_desired_moment = Vector3d::Zero();
 
 				posori_task->setClosedLoopForceControl();
-				// posori_task->setClosedLoopMomentControl();
+				posori_task->setClosedLoopMomentControl();
 
 				// Switch to new haptic controller
 				teleop_task->reInitializeTask();
@@ -812,35 +814,27 @@ int main() {
 			guidance_normal_vec = R_tool.col(2);
 			// update normal local vector in robot space for unified control
 			posori_task->updateForceAxis(guidance_normal_vec);
-			// posori_task->updateAngularMotionAxis(guidance_normal_vec);
+			posori_task->updateAngularMotionAxis(guidance_normal_vec);
 			// Update the selection matrices for haptic controller
 			teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
 							 						posori_task->_sigma_force, posori_task->_sigma_moment);
 			
 			//Compute haptic commands
-			// if (autonomous_aligment)
-			// {
-			// 	teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
-			// 													posori_task->_desired_force, desired_torque_robot);
+			if (autonomous_aligment)
+			{
+				teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
+																posori_task->_desired_force, desired_torque_robot);
 		
-			// }
-			// else
-			// {
-			// 	teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
-			// 													posori_task->_desired_force, posori_task->_desired_moment);	
-			// }
-			teleop_task->computeHapticCommandsUnifiedControl3d(posori_task->_desired_position, posori_task->_desired_force);
+			}
+			else
+			{
+				teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
+																posori_task->_desired_force, posori_task->_desired_moment);	
+			}
 
 			// cout << posori_task->_desired_force.transpose() << endl;
 			// cout << teleop_task->_commanded_force_device.transpose() << endl;
 			// cout << endl;
-
-			posori_task->_desired_force(2) -= 5.0;
-			// teleop_task->_commanded_force_device(2) += 7.0;
-
-			// posori_task->_desired_force(2) = 0.0;
-			// posori_task->_desired_position(0) = 0.4 + 0.1*sin(2*M_PI*0.5*(current_time-t0));
-
 
 			// Adjust mass matrix to increase wrist desired stiffness
 			if(!flag_simulation)
@@ -867,6 +861,7 @@ int main() {
 
 			// compute PO
 			passivity_controller->computePOPCForce(haptic_damping_force_passivity);
+			passivity_controller->computePOPCTorque(haptic_damping_moment_passivity);
 
 			// teleop_task->_commanded_force_device.setZero();
 
@@ -996,7 +991,9 @@ int main() {
 		
 		// add damping to passivity controller and write all to redis
 		command_force_device_plus_damping = teleop_task->_commanded_force_device + haptic_damping_force_passivity;
+		command_torque_device_plus_damping = teleop_task->_commanded_torque_device + haptic_damping_moment_passivity;
 		// command_force_device_plus_damping = teleop_task->_commanded_force_device;
+		// command_torque_device_plus_damping = teleop_task->_commanded_torque_device
 		// command_force_device_plus_damping.setZero();
 		redis_client.writeAllSetupValues();
 
