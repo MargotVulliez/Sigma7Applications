@@ -4,6 +4,7 @@
 #include "Sai2Graphics.h"
 #include "Sai2Simulation.h"
 #include <dynamics3d.h>
+#include <chai3d.h>
 #include "redis/RedisClient.h"
 #include "timer/LoopTimer.h"
 
@@ -57,15 +58,13 @@ string JOINT_TORQUES_COMMANDED_KEY = "sai2::Sigma7Applications::actuators::torqu
 
 RedisClient redis_client;
 
-// create graphics object
-auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
+auto graphics = new Sai2Graphics::Sai2Graphics(world_file, false);
 
 //Find node of the curved surface in world
-cDynamicBase* object = graphics->_world->getBaseNode(part_name);
+cDynamicBase* object; // = sim->_world->getBaseNode(part_name);
 
 // simulation function prototype
 void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim);
-void simulation_dummy(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim);
 
 // callback to print glfw errors
 void glfwError(int error, const char* description);
@@ -119,13 +118,16 @@ int main() {
 	// graphics->_world->addChild(camera);
 	// camera->setUseMultipassTransparency(true);
 
+
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 	
 	// load simulation world
+	// auto sim = new Simulation::Sai2Simulation(world_file, false);
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
 	sim->setCollisionRestitution(0);
 	sim->setCoeffFrictionStatic(0.2);
+	object = sim->_world->getBaseNode(part_name);
 
 	// read joint positions, velocities, update model
 	sim->getJointPositions(robot_name, robot->_q);
@@ -167,17 +169,8 @@ int main() {
 	double last_cursorx, last_cursory;
 
 	fSimulationRunning = true;
-	thread sim_thread(simulation_dummy, robot, sim);
-	if(flag_simulation)
-	{
-		// start the simulation thread first
-		thread sim_thread_bis(simulation, robot, sim);
-		sim_thread.swap(sim_thread_bis);
-		sim_thread_bis.join();
-	}
+	thread sim_thread(simulation, robot, sim);
 
-	auto handler = new cHapticDeviceHandler();
-	
 	// while window is open:
 	while (!glfwWindowShouldClose(window))
 	{
@@ -285,9 +278,6 @@ int main() {
 }
 
 //------------------------------------------------------------------------------
-void simulation_dummy(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {}
-
-//------------------------------------------------------------------------------
 void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 
 	VectorXd command_torques = VectorXd::Zero(robot->dof());
@@ -311,11 +301,6 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	bool fTimerDidSleep = true;
 
 	unsigned long long simulation_counter = 0;
-
-
-
-
-
 
 	while (fSimulationRunning) {
 		fTimerDidSleep = timer.waitForNextLoop();
@@ -348,20 +333,21 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 		// write task force in redis
 		redis_client.setEigenMatrixJSON(FORCE_SENSED_KEY,f_task);
 
-	// Get contact list with curved surface
-	contact_points.clear();
-	contact_normals.clear();
-	contact_point_mean.setZero();
-	contact_normal_mean.setZero();
-	int num_contacts = object->m_dynamicContacts->getNumContacts();
-	// only consider if the oject is contacting something
-        if(num_contacts > 0)
-        {
-        	for(int k=0; k < num_contacts; k++)
+		// Get contact list with curved surface
+		contact_points.clear();
+		contact_normals.clear();
+		contact_point_mean.setZero();
+		contact_normal_mean.setZero();
+		int num_contacts = object->m_dynamicContacts->getNumContacts();
+
+		// only consider if the oject is contacting something
+	    if(num_contacts > 0)
+	    {
+	    	for(int k=0; k < num_contacts; k++)
 	    	{
 	        	cDynamicContact* contact = object->m_dynamicContacts->getContact(k);
 	        	// only consider contacts at the desired link
-                if(contact==NULL || contact->m_dynamicLink->m_name != link_name)
+	            if(contact==NULL || contact->m_dynamicLink->m_name != link_name)
 	        	{
 	        		continue;
 	        	}
@@ -374,15 +360,15 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	        	contact_points.push_back(current_position);
 	        	contact_normals.push_back(current_normal);
 	        }
+			//Compute average contact point and normal
+		    for(int p=0; p < contact_points.size(); p++)
+		    {
+				contact_point_mean += contact_points.at(p);
+				contact_normal_mean += contact_normals.at(p);
+		    }
+		    contact_point_mean = contact_point_mean/contact_points.size();
+		    contact_normal_mean = contact_normal_mean/contact_points.size();
 	    }
-	//Compute average contact point and normal
-	    for(int p=0; p < contact_points.size(); p++)
-	    {
-			contact_point_mean += contact_points(p);
-			contact_normal_mean += contact_normals(p);
-	    }
-	    contact_point_mean = contact_point_mean/contact_points.size();
-	    contact_normal_mean = contact_normal_mean/contact_points.size();
 
 	    redis_client.setEigenMatrixJSON(CONTACT_POINT_KEY,contact_point_mean);
 	    redis_client.setEigenMatrixJSON(CONTACT_NORMAL_KEY,contact_normal_mean);

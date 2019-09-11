@@ -523,6 +523,9 @@ int main() {
 		current_time = timer.elapsedTime() - start_time;
 		// dt = current_time - prev_time;
 
+		f_virtual_trans_rob_frame = teleop_task->_Rotation_Matrix_DeviceToRobot.transpose() * teleop_task->_f_virtual_trans;
+		f_virtual_rot_rob_frame = teleop_task->_Rotation_Matrix_DeviceToRobot.transpose() * teleop_task->_f_virtual_rot;
+
 		// read all redis keys
 		redis_client.readAllSetupValues();
 
