@@ -49,6 +49,9 @@ bilateral_passivity_alpha_moment = file[1::,119]
 passivity_Rc_force = file[1::,120]
 passivity_Rc_moment = file[1::,121]
 
+virtual_force_robot_frame = file[1::,122:125]
+virtual_moment_robot_frame = file[1::,125:128]
+
 time -= time[0]
 
 plt.figure(1)

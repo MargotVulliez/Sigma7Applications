@@ -44,8 +44,8 @@ unsigned long long controller_counter = 0;
 
 const bool inertia_regularization = true;
 
-const bool flag_simulation = true;
-// const bool flag_simulation = false;
+// const bool flag_simulation = true;
+const bool flag_simulation = false;
 
 const bool autonomous_aligment = true;
 
@@ -195,7 +195,7 @@ int main() {
 	Eigen::Affine3d robot_pose_in_world = Affine3d::Identity();
 	// robot_pose_in_world.translation() = Vector3d(0, -0.5, 0.0);
 	//robot_pose_in_world.linear() = Matrix3d::Identity ();
-	robot_pose_in_world.linear() = AngleAxisd(0.3010693, Vector3d::UnitZ()).toRotationMatrix();
+	// robot_pose_in_world.linear() = AngleAxisd(0.3010693, Vector3d::UnitZ()).toRotationMatrix();
 	Matrix3d R_tool = Matrix3d::Identity(); 
 	
 	// start redis client
@@ -233,8 +233,9 @@ int main() {
 	// Define goal position according to the desired posture ///////////////////////////////////////////////////////////////////////////////////////////////// 
 	VectorXd goal_posture(robot->dof());
 	// goal_posture << 0.917648,-0.281587,0.127892,-1.93048,-0.0188945,1.67564,0.729007;
-	goal_posture << -0.0818928,0.0794155,0.580881,-1.59559,-0.0234656,1.66133,-1.11493;
+	// goal_posture << -0.0818928,0.0794155,0.580881,-1.59559,-0.0234656,1.66133,-1.11493;
 	// goal_posture << 0.194083,0.592397,0.293649,-1.73701,-0.252896,2.31038,-1.13493;
+	goal_posture << 0.0,-0.618209,0.0,-2.27868,0.0,1.65988,0.0;
 	//goal_posture = joint_task->_current_position;
 	joint_task->_desired_position = goal_posture;
 
@@ -256,14 +257,14 @@ int main() {
 
 	posori_task->_kp_pos = 150.0;
 	posori_task->_kv_pos = 16.0;
-	posori_task->_kp_ori = 300.0;
-	posori_task->_kv_ori = 18.0;
+	posori_task->_kp_ori = 550.0;
+	posori_task->_kv_ori = 22.0;
 	posori_task->_ki_pos = 0.0;
 	posori_task->_ki_ori = 0.0;
 
-	posori_task->_kp_force = 0.1;
+	posori_task->_kp_force = 0.5;
 	posori_task->_kv_force = 5.0;
-	posori_task->_ki_force = 0.05;
+	posori_task->_ki_force = 0.4;
 	posori_task->_kp_moment = 0.5;
 	posori_task->_kv_moment = 10.0;
 	posori_task->_ki_moment = 1.5;
@@ -311,10 +312,10 @@ int main() {
 
 	double force_guidance_position_impedance = 1000.0;
 	double force_guidance_orientation_impedance = 50.0;
-	double force_guidance_position_damping = 12.0;
-	double force_guidance_orientation_damping = 0.05;
+	double force_guidance_position_damping = 5.0;
+	double force_guidance_orientation_damping = 0.1;
 	teleop_task->setVirtualGuidanceGains (force_guidance_position_impedance, force_guidance_position_damping,
-									force_guidance_orientation_impedance, force_guidance_orientation_damping);	
+									force_guidance_orientation_impedance, force_guidance_orientation_damping);
 
 	// Set haptic controllers parameters
 	Matrix3d Red_factor_rot = Matrix3d::Identity();
@@ -322,9 +323,9 @@ int main() {
 	Red_factor_rot << 1/10.0, 0.0, 0.0,
 						  0.0, 1/10.0, 0.0,
 						  0.0, 0.0, 1/10.0;
-	Red_factor_trans << 1.0/1.5, 0.0, 0.0,
-						  0.0, 1.0/1.5, 0.0,
-						  0.0, 0.0, 1.0/1.5;
+	Red_factor_trans << 1.0/1.0, 0.0, 0.0,
+						  0.0, 1.0/1.0, 0.0,
+						  0.0, 0.0, 1.0/1.0;
 	double kp_robot_trans_velocity = 10.0;
 	double ki_robot_trans_velocity = 0.0;
 	double kp_robot_rot_velocity =10.0;
@@ -619,10 +620,11 @@ int main() {
 				teleop_task->reInitializeTask();
 				// posori_task->_desired_position(2) -= 0.01;
 
-				posori_task->_desired_orientation << 0, 1, 0, 1, 0, 0, 0, 0, -1;
+				cout << posori_task->_desired_orientation << endl;
+				posori_task->_desired_orientation << 1, 0, 0, 0, -1, 0, 0, 0, -1;
 
 				ori_task->reInitializeTask();
-				ori_task->_desired_orientation << 0, 1, 0, 1, 0, 0, 0, 0, -1;
+				ori_task->_desired_orientation << 1, 0, 0, 0, -1, 0, 0, 0, -1;
 
 				joint_task->_kp = 50.0;
 				joint_task->_kv = 14.0;
@@ -726,7 +728,7 @@ int main() {
 				posori_task->_desired_force = - Ks * transformDev_Rob.transpose()*teleop_task->_commanded_force_device;
 				// posori_task->_desired_moment = Vector3d::Zero();
 
-				posori_task->setClosedLoopForceControl();
+				// posori_task->setClosedLoopForceControl();
 				// posori_task->setClosedLoopMomentControl();
 
 				// Switch to new haptic controller
@@ -740,7 +742,7 @@ int main() {
 				Vector3d rpos = Vector3d::Zero();
 				robot->position(rpos, link_name, pos_in_link);
 				xy_desired = rpos.head(2);
-				cout << xy_desired.transpose() << endl << endl;
+				// cout << xy_desired.transpose() << endl << endl;
 
 				switch_state_counter = 500;
 				t0 = current_time;
@@ -842,7 +844,7 @@ int main() {
 			// cout << teleop_task->_commanded_force_device.transpose() << endl;
 			// cout << endl;
 
-			posori_task->_desired_force(2) -= 5.0;
+			// posori_task->_desired_force(2) -= 5.0;
 			// teleop_task->_commanded_force_device(2) += 7.0;
 
 			// posori_task->_desired_force(2) = 0.0;
@@ -859,7 +861,8 @@ int main() {
 				// cout << posori_task->_Lambda(0,2) << endl;
 				// cout << posori_task->_Lambda << endl << endl;
 				
-				double coupling_correction = 3.5;
+				double coupling_correction = 0.0;
+				coupling_correction = 3.5;
 				posori_task->_Lambda(0,2) += coupling_correction;
 				posori_task->_Lambda(2,0) += coupling_correction;
 			}
