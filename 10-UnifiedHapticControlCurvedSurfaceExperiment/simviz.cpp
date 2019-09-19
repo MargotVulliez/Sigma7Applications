@@ -126,7 +126,7 @@ int main() {
 	// auto sim = new Simulation::Sai2Simulation(world_file, false);
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
 	sim->setCollisionRestitution(0);
-	sim->setCoeffFrictionStatic(0.2);
+	sim->setCoeffFrictionStatic(0.3);
 	object = sim->_world->getBaseNode(part_name);
 
 	// read joint positions, velocities, update model
@@ -289,14 +289,17 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	// Add force sensor to the end-effector
 	auto force_sensor = new ForceSensorSim(robot_name, link_name, sensor_transform_in_link, robot);
 	auto fsensor_display = new ForceSensorDisplay(force_sensor, graphics);
+	// force_sensor->enableFilter(0.015);
+	fsensor_display->_force_line_scale = 0.5;
+	fsensor_display->_moment_line_scale = 5.0;
 	Vector3d sensed_force = Vector3d::Zero();
 	Vector3d sensed_moment = Vector3d::Zero();
-	// force_sensor->enableFilter(0.016);
+	force_sensor->enableFilter(0.08);
 
 	// create a timer
 	LoopTimer timer;
 	timer.initializeTimer();
-	timer.setLoopFrequency(2000); 
+	timer.setLoopFrequency(1000); 
 	double last_time = timer.elapsedTime(); //secs
 	bool fTimerDidSleep = true;
 
@@ -329,6 +332,7 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 		force_sensor->update(sim);
 		force_sensor->getForce(sensed_force);
 		force_sensor->getMoment(sensed_moment);
+		fsensor_display->update();
 		f_task << sensed_force, sensed_moment;
 		// write task force in redis
 		redis_client.setEigenMatrixJSON(FORCE_SENSED_KEY,f_task);
@@ -347,7 +351,9 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	    	{
 	        	cDynamicContact* contact = object->m_dynamicContacts->getContact(k);
 	        	// only consider contacts at the desired link
-	            if(contact==NULL || contact->m_dynamicLink->m_name != link_name)
+	        	// cout << contact->m_dynamicLink->m_name << endl;
+	        	// cout << link_name << endl;
+	            if(contact==NULL || contact->m_dynamicLink->m_name != "static_object_link")
 	        	{
 	        		continue;
 	        	}
@@ -361,15 +367,19 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	        	contact_normals.push_back(current_normal);
 	        }
 			//Compute average contact point and normal
+			// cout << contact_points.size() << endl;
 		    for(int p=0; p < contact_points.size(); p++)
 		    {
+		    	// cout << contact_points.at(p).transpose() << endl;
 				contact_point_mean += contact_points.at(p);
 				contact_normal_mean += contact_normals.at(p);
 		    }
 		    contact_point_mean = contact_point_mean/contact_points.size();
 		    contact_normal_mean = contact_normal_mean/contact_points.size();
+		    // cout << endl << endl;
 	    }
 
+	    // cout << contact_point_mean.transpose() << endl;
 	    redis_client.setEigenMatrixJSON(CONTACT_POINT_KEY,contact_point_mean);
 	    redis_client.setEigenMatrixJSON(CONTACT_NORMAL_KEY,contact_normal_mean);
 

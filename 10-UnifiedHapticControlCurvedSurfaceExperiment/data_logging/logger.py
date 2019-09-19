@@ -24,7 +24,9 @@ signal.signal(signal.SIGINT, signal_handler)
 
 # data files
 # folder = 'simulation/'
-folder = 'experiments_bis/'
+# folder = 'experiments_bis/'
+# folder = 'simulations_sept_12/'
+folder = 'simulations_sept_14/'
 
 if not os.path.exists(folder):
     os.makedirs(folder)
@@ -88,6 +90,12 @@ LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT = "sai2::Sigma7Applications::logging::b
 LOGGING_PASSIVITY_RC_FORCE = "sai2::Sigma7Applications::logging::autonomous_passivity_Rc_force";
 LOGGING_PASSIVITY_RC_MOMENT = "sai2::Sigma7Applications::logging::autonomous_passivity_Rc_moment";
 
+LOGGING_VIRTUAL_FORCE_ROBOT_FRAME = "sai2::Sigma7Applications::logging::force_virtual_robot_frame";
+LOGGING_VIRTUAL_MOMENT_ROBOT_FRAME = "sai2::Sigma7Applications::logging::moment_virtual_robot_frame";
+
+LOGGING_POSITION_ERROR_Z = "sai2::Sigma7Applications::logging::z_error";
+LOGGING_ANGULAR_ERROR_ORIENT = "sai2::Sigma7Applications::logging::angular_error";
+
 
 # data logging frequency
 logger_frequency = 100.0  # Hz
@@ -134,6 +142,12 @@ while(runloop):
     pipe.get(LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT)
     pipe.get(LOGGING_PASSIVITY_RC_FORCE)
     pipe.get(LOGGING_PASSIVITY_RC_MOMENT)
+
+    pipe.get(LOGGING_VIRTUAL_FORCE_ROBOT_FRAME)
+    pipe.get(LOGGING_VIRTUAL_MOMENT_ROBOT_FRAME)
+
+    pipe.get(LOGGING_POSITION_ERROR_Z)
+    pipe.get(LOGGING_ANGULAR_ERROR_ORIENT)
 
     responses = pipe.execute()
 

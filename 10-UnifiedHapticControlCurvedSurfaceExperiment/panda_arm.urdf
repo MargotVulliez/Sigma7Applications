@@ -136,7 +136,7 @@
         <geometry>
           <!-- <sphere radius="0.04" /> -->
           <!-- <box size="0.04 0.04 0.04"/> -->
-          <cylinder length="0.04" radius="0.015"/>
+          <cylinder length="0.02" radius="0.015"/>
         </geometry>
       </visual>
       <collision>
@@ -144,7 +144,7 @@
         <geometry>
           <!-- <sphere radius="0.04" /> -->
           <!-- <box size="0.04 0.04 0.04"/> -->
-          <cylinder length="0.04" radius="0.015"/>
+          <cylinder length="0.02" radius="0.015"/>
         </geometry>
       </collision>
 

@@ -309,10 +309,12 @@ int main() {
 	teleop_task->setVirtualProxyGains (proxy_position_impedance, proxy_position_damping,
 									   proxy_orientation_impedance, proxy_orientation_damping);
 
-	double force_guidance_position_impedance = 2000.0;
+	double force_guidance_position_impedance = 1000.0;
 	double force_guidance_orientation_impedance = 50.0;
-	teleop_task->setVirtualGuidanceGains (force_guidance_position_impedance,
-									force_guidance_orientation_impedance);	
+	double force_guidance_position_damping = 12.0;
+	double force_guidance_orientation_damping = 0.05;
+	teleop_task->setVirtualGuidanceGains (force_guidance_position_impedance, force_guidance_position_damping,
+									force_guidance_orientation_impedance, force_guidance_orientation_damping);	
 
 	// Set haptic controllers parameters
 	Matrix3d Red_factor_rot = Matrix3d::Identity();
@@ -496,7 +498,7 @@ int main() {
 
 	redis_client.addDoubleToWrite(LOGGING_BILATERAL_PASSIVITY_ALPHA_FORCE, passivity_controller->_alpha_force);
 	redis_client.addDoubleToWrite(LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT, passivity_controller->_alpha_moment);
-	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_FORCE, posori_task->_Rc_inv);
+	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_FORCE, posori_task->_Rc_inv_force);
 	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_MOMENT, Rc_moment);
 
 	Vector3d f_virtual_trans_rob_frame = teleop_task->_Rotation_Matrix_DeviceToRobot.transpose() * teleop_task->_f_virtual_trans;

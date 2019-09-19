@@ -49,6 +49,15 @@ bilateral_passivity_alpha_moment = file[1::,119]
 passivity_Rc_force = file[1::,120]
 passivity_Rc_moment = file[1::,121]
 
+f_virtual = file[1::,122:125]
+m_virtual = file[1::,125:128]
+
+pos_error_z = file[1::,128]
+angular_error_orient = file[1::,129:132]
+
+angular_error_orient_norm = np.sqrt(np.sum(angular_error_orient**2,axis=1))
+
+
 time -= time[0]
 
 plt.figure(1)
@@ -57,21 +66,43 @@ plt.plot(-haptic_command_force, '--')
 plt.title("sensed force and haptic force")
 
 plt.figure(2)
-plt.plot(robot_current_position)
-plt.plot(robot_desired_position, '--')
-plt.title("robot desired position and current position")
+plt.plot(sensed_moment_robot_frame)
+plt.plot(-haptic_command_torques)
+plt.title("sensed moment and haptic moment")
 
-plt.figure(10)
-plt.plot(haptic_position)
-plt.title("haptic position")
-
-plt.figure(3)
-plt.plot(bilateral_passivity_alpha_force)
-plt.title("passivity_bilateral_damping")
+# plt.figure(3)
+# plt.plot(angular_error_orient)
+# plt.title("normal error")
 
 plt.figure(4)
-plt.plot(passivity_Rc_force)
-plt.title("passivity Rc")
+plt.plot(angular_error_orient_norm)
+plt.title("normal error norm square")
+
+plt.figure(10)
+plt.plot(robot_current_position[:,1],robot_current_position[:,2])
+# plt.plot(robot_current_position[:,2])
+plt.title("trajectory")
+
+# plt.figure(2)
+# plt.plot(robot_current_position)
+# plt.plot(robot_desired_position, '--')
+# plt.title("robot desired position and current position")
+
+# plt.figure(10)
+# plt.plot(haptic_position)
+# plt.title("haptic position")
+
+# plt.figure(11)
+# plt.plot(haptic_orientation)
+# plt.title("haptic orientation")
+
+# plt.figure(3)
+# plt.plot(bilateral_passivity_alpha_force)
+# plt.title("passivity_bilateral_damping")
+
+# plt.figure(4)
+# plt.plot(passivity_Rc_force)
+# plt.title("passivity Rc")
 
 
 plt.show()
