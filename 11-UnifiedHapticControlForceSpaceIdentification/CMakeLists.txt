@@ -1,0 +1,17 @@
+# create an executable
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SIGMA7_APPLICATIONS_BINARY_DIR}/11-UnifiedHapticControlForceSpaceIdentification)
+ADD_EXECUTABLE (controller11 controller.cpp  ${SIGMA7_APPLICATIONS_COMMON_SOURCE})
+ADD_EXECUTABLE (simviz11 simviz.cpp ${SIGMA7_APPLICATIONS_COMMON_SOURCE})
+
+# and link the library against the executable
+TARGET_LINK_LIBRARIES (controller11 ${SIGMA7_APPLICATIONS_COMMON_LIBRARIES})
+TARGET_LINK_LIBRARIES (simviz11 ${SIGMA7_APPLICATIONS_COMMON_LIBRARIES})
+
+# export resources such as model files.
+# NOTE: this requires an install build
+SET(RESOURCE_DIR ${SIGMA7_APPLICATIONS_BINARY_DIR}/resources)
+FILE(MAKE_DIRECTORY ${RESOURCE_DIR})
+SET(APP_RESOURCE_DIR ${RESOURCE_DIR}/11-UnifiedHapticControlForceSpaceIdentification)
+FILE(MAKE_DIRECTORY ${APP_RESOURCE_DIR})
+FILE(COPY world.urdf DESTINATION ${APP_RESOURCE_DIR})
+FILE(COPY panda_arm.urdf panda_arm_sim.urdf DESTINATION ${APP_RESOURCE_DIR})
