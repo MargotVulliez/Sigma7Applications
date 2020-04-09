@@ -267,8 +267,8 @@ int main() {
 
 	posori_task->_kp_pos = 150.0;
 	posori_task->_kv_pos = 16.0;
-	posori_task->_kp_ori = 550.0;
-	posori_task->_kv_ori = 22.0;
+	posori_task->_kp_ori = 500.0;
+	posori_task->_kv_ori = 30.0;
 	posori_task->_ki_pos = 0.0;
 	posori_task->_ki_ori = 0.0;
 
@@ -601,8 +601,8 @@ int main() {
     if(controller_counter % 100 == 1)
 		{
     //cout << "Position device :" << (teleop_task->_current_position_device).transpose() << endl ;
-    //cout << "Commanded robot position :" << (posori_task->_desired_position).transpose() << endl;
     cout << "Uncontrolled sensed contact force :" << contact_force.transpose() << endl;
+    cout << "Commanded robot force :" << (posori_task->_desired_force).transpose() << endl;
     //cout << "Sensed robot force :" << (f_task_sensed_control_point.head(3)).transpose() << endl;
     //cout << "norm contact force :" << contact_force.norm() << endl;
     //cout << "robot displacement :" << robot_displacement.transpose() << endl;
@@ -915,7 +915,7 @@ int main() {
               }
 
               // Contact release
-              if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= maintained_contact_threshold)
+              if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
               {
                 release_counter_1 ++;
               }
@@ -954,7 +954,7 @@ int main() {
                }
 
                // Contact release
-               if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= maintained_contact_threshold)
+               if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
                {
                  release_counter_2 ++;
                }
@@ -962,7 +962,7 @@ int main() {
                {
                  release_counter_2 = 0;
                }
-               if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= maintained_contact_threshold)
+               if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
                {
                  release_counter_1 ++;
                }
@@ -988,7 +988,7 @@ int main() {
 
 
                 // Contact release
-                if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= maintained_contact_threshold)
+                if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
                 {
                   release_counter_3 ++;
                 }
@@ -996,7 +996,7 @@ int main() {
                 {
                   release_counter_3 = 0;
                 }
-                if (guidance_normal_vec_second.transpose() * f_task_sensed_control_point.head(3) <= maintained_contact_threshold)
+                if (guidance_normal_vec_second.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
                 {
                   release_counter_2 ++;
                 }
@@ -1004,7 +1004,7 @@ int main() {
                 {
                   release_counter_2 = 0;
                 }
-                if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= maintained_contact_threshold)
+                if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
                 {
                   release_counter_1 ++;
                 }
@@ -1032,6 +1032,11 @@ int main() {
                   // set force feedback to proxy computation during contact establishment
                   teleop_task->_haptic_feedback_from_proxy = true;
 
+                  if (robot_displacement_contact < contact_displacement_threshold)
+                  {
+                    nbr_force_direction = nbr_force_direction_prev;
+                  }
+
                   // Evaluate mean contact force and normal direction
                   if (contact_counter <= contact_duration)
                   {
@@ -1045,7 +1050,7 @@ int main() {
                     {
                       guidance_normal_vec = mean_contact_normal/contact_duration;
 
-                      posori_task->setClosedLoopForceControl();
+                      //posori_task->setClosedLoopForceControl();
                       //posori_task->_passivity_enabled = true;
 
                       release_counter_1 = 0;
