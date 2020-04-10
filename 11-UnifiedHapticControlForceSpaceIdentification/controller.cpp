@@ -441,7 +441,9 @@ int main() {
 
 	// Add device workspace virtual limits
 	teleop_task->_add_workspace_virtual_limit=true;
-	double device_workspace_radius_limit = 0.075;
+  // double device_workspace_radius_limit = 0.075;
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  double device_workspace_radius_limit = 0.2;
 	double device_workspace_angle_limit = 90*M_PI/180.0;
 	teleop_task->setWorkspaceLimits(device_workspace_radius_limit, device_workspace_angle_limit);
 
@@ -1035,6 +1037,7 @@ int main() {
                   if (robot_displacement_contact < contact_displacement_threshold)
                   {
                     nbr_force_direction = nbr_force_direction_prev;
+                    contact_counter = 0;
                   }
 
                   // Evaluate mean contact force and normal direction
@@ -1046,6 +1049,7 @@ int main() {
                   }
                   else
                   {
+                    contact_counter = 0;
                     if ((mean_contact_force/contact_duration) >= maintained_contact_threshold)
                     {
                       guidance_normal_vec = mean_contact_normal/contact_duration;

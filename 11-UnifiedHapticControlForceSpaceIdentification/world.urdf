@@ -48,7 +48,7 @@
 	    </visual>
 	</static_object>
 
-	<static_object name="Box">
+	<!-- <static_object name="Box">
 		<origin xyz="0.2 0.0 0.51" rpy="0.0 0.0 0.0" />
 		<collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
@@ -65,6 +65,25 @@
 		        <color rgba="0.20 0.47 1.00 1.0" />
 	        </material>
 	    </visual>
+	</static_object> -->
+
+	<static_object name="Curved Box">
+		<origin xyz="0.2 0.0 0.51" rpy="0.0 0.0 0.0" />
+		<collision>
+					<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+					<geometry>
+							<cylinder length="0.06" radius="0.1" />
+					</geometry>
+			</collision>
+			<visual>
+					<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+					<geometry>
+							<cylinder length="0.06" radius="0.1" />
+					</geometry>
+					<material name="material_blue">
+						<color rgba="0.20 0.47 1.00 1.0" />
+					</material>
+			</visual>
 	</static_object>
 
 	<light name="light1" type="directional">
