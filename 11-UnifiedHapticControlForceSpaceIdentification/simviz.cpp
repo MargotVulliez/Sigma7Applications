@@ -31,13 +31,14 @@ const string link_name = "link7"; //robot end-effector
 // Set sensor frame transform in end-effector frame
 Affine3d sensor_transform_in_link = Affine3d::Identity();
 const Vector3d sensor_pos_in_link = Eigen::Vector3d(0.0,0.0,0.117);
+const Vector3d pos_in_link = Vector3d(0.0,0.0,0.147);
 
 VectorXd f_task = VectorXd::Zero(6);
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Define parameters for control with keyboard
 Vector3d current_mouse_position = Eigen::Vector3d(0.0, 0.01, 0.0);
 int mouse_gripper = 0;
-// flags for keybord commands
+// flags for keyboard commands
 bool fMouseXp = false;
 bool fMouseXn = false;
 bool fMouseYp = false;
@@ -52,17 +53,16 @@ int k=0;
 string JOINT_ANGLES_KEY  = "sai2::Sigma7Applications::sensors::q";
 string JOINT_VELOCITIES_KEY  = "sai2::Sigma7Applications::sensors::dq";
 string FORCE_SENSED_KEY = "sai2::Sigma7Applications::sensors::force_task_sensed";
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 string MOUSE_POSITION_KEY = "sai2::Sigma7Applications::sensors::current_mouse_position";
 string MOUSE_GRIPPER_KEY = "sai2::Sigma7Applications::sensors::current_mouse_gripper";
+
+// - read (from haptic device command input):
+string JOINT_TORQUES_COMMANDED_KEY = "sai2::Sigma7Applications::actuators::torque_joint_robot";
 
 string CONTROLLED_CONTACT_DIRECTION_1 = "sai2::Sigma7Applications::sensors::first_direction_controlled_contact_force";
 string CONTROLLED_CONTACT_DIRECTION_2 = "sai2::Sigma7Applications::sensors::second_direction_controlled_contact_force";
 string CONTROLLED_CONTACT_DIRECTION_3 = "sai2::Sigma7Applications::sensors::third_direction_controlled_contact_force";
-
-
-// - read (from haptic device command input):
-string JOINT_TORQUES_COMMANDED_KEY = "sai2::Sigma7Applications::actuators::torque_joint_robot";
 
 RedisClient redis_client;
 
@@ -274,9 +274,7 @@ int main() {
 		graphics->setCameraPose(camera_name, camera_pos, cam_up_axis, camera_lookat);
 		glfwGetCursorPos(window, &last_cursorx, &last_cursory);
 
-
-
-		///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// keys as device inputs
 		if (fMouseXp) {
 			current_mouse_position[0] += 0.0001;
 		}
@@ -334,11 +332,27 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 	Vector3d contact_control_first = Vector3d::Zero();
 	Vector3d contact_control_second = Vector3d::Zero();
 	Vector3d contact_control_third = Vector3d::Zero();
+	cVector3d position_robot;
+	Vector3d pos_rob_model;
 
 	redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_1,contact_control_first);
 	redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_2,contact_control_second);
 	redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_3,contact_control_third);
 
+	// Pointer to world
+	auto world_ptr = graphics->_world;
+	// create lines for force-controlled directions
+	cShapeLine* direction_1;
+	cShapeLine* direction_2;
+	cShapeLine* direction_3;
+
+	direction_1 = new cShapeLine(cVector3d(0,0,0),cVector3d(0,0,0));
+	direction_2 = new cShapeLine(cVector3d(0,0,0),cVector3d(0,0,0));
+	direction_3 = new cShapeLine(cVector3d(0,0,0),cVector3d(0,0,0));
+
+	world_ptr->addChild(direction_1);
+	world_ptr->addChild(direction_2);
+	world_ptr->addChild(direction_3);
 
 	// auto fsensor_display = new ForceSensorDisplay(force_sensor, graphics);
 
@@ -387,15 +401,25 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim) {
 		sim->getJointVelocities(robot_name, robot->_dq);
 		robot->updateKinematics();
 
+		// update robot position vector from model
+		robot->position(pos_rob_model, link_name, pos_in_link);
+		position_robot.set(pos_rob_model[0], pos_rob_model[1], pos_rob_model[2]);
+
+		// update force directions
+		direction_1->m_pointA = position_robot;
+		direction_1->m_pointB = cAdd(position_robot, cVector3d(contact_control_first[0], contact_control_first[1], contact_control_first[2]));
+		direction_2->m_pointA = position_robot;
+		direction_2->m_pointB = cAdd(position_robot, cVector3d(contact_control_second[0], contact_control_second[1], contact_control_second[2]));
+		direction_3->m_pointA = position_robot;
+		direction_3->m_pointB = cAdd(position_robot, cVector3d(contact_control_third[0], contact_control_third[1], contact_control_third[2]));
+
 		// write new robot state to redis
 		redis_client.setEigenMatrixJSON(JOINT_ANGLES_KEY, robot->_q);
 		redis_client.setEigenMatrixJSON(JOINT_VELOCITIES_KEY, robot->_dq);
 
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		redis_client.setEigenMatrixJSON(MOUSE_POSITION_KEY, current_mouse_position); //if no device use keybord keys
+		// Sending keyboard inputs if no device
+		redis_client.setEigenMatrixJSON(MOUSE_POSITION_KEY, current_mouse_position);
 		redis_client.set(MOUSE_GRIPPER_KEY, to_string(mouse_gripper));
-
 
 		// read end-effector task forces from the force sensor simulation
 		force_sensor->update(sim);
@@ -459,7 +483,7 @@ void keySelect(GLFWwindow* window, int key, int scancode, int action, int mods)
 		case GLFW_KEY_S:
 			fshowCameraPose = set;
 			break;
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// device input keys
 			case GLFW_KEY_U:
 				fMouseXp = set;
 		    break;

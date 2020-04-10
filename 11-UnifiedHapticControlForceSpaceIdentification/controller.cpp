@@ -46,6 +46,8 @@ const bool inertia_regularization = true;
 // const bool flag_simulation = true;
 const bool flag_simulation = true;
 
+const bool using_keyboard_input = true;
+
 //const bool autonomous_aligment = false;
 
 int remote_enabled = 1;
@@ -69,7 +71,6 @@ string JOINT_TORQUES_SENSED_KEY = "sai2::Sigma7Applications::sensors::torques";
 
 string FORCE_SENSED_KEY = "sai2::Sigma7Applications::sensors::force_task_sensed";
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 string MOUSE_POSITION_KEY = "sai2::Sigma7Applications::sensors::current_mouse_position";
 string MOUSE_GRIPPER_KEY = "sai2::Sigma7Applications::sensors::current_mouse_gripper";
 int mouse_gripper = 0;
@@ -242,9 +243,6 @@ int main() {
 
 	// Define goal position according to the desired posture /////////////////////////////////////////////////////////////////////////////////////////////////
 	VectorXd goal_posture(robot->dof());
-	// goal_posture << 0.917648,-0.281587,0.127892,-1.93048,-0.0188945,1.67564,0.729007;
-	// goal_posture << -0.0818928,0.0794155,0.580881,-1.59559,-0.0234656,1.66133,-1.11493;
-	// goal_posture << 0.194083,0.592397,0.293649,-1.73701,-0.252896,2.31038,-1.13493;
 	goal_posture << 0.0,-0.618209,0.0,-2.27868,0.0,1.65988,0.0;
 	//goal_posture = joint_task->_current_position;
 	joint_task->_desired_position = goal_posture;
@@ -341,29 +339,33 @@ int main() {
 									Red_factor_trans, Red_factor_rot);
 
 	// Read haptic device specifications from haptic driver
-	// VectorXd _max_stiffness_device0 = redis_client.getEigenMatrixJSON(DEVICE_MAX_STIFFNESS_KEYS[0]);
-	// VectorXd _max_damping_device0 = redis_client.getEigenMatrixJSON(DEVICE_MAX_DAMPING_KEYS[0]);
-	// VectorXd _max_force_device0 = redis_client.getEigenMatrixJSON(DEVICE_MAX_FORCE_KEYS[0]);
+  if (using_keyboard_input)
+  {
+    teleop_task->_max_linear_stiffness_device = 5000.0;
+    teleop_task->_max_angular_stiffness_device = 0.0;
+    teleop_task->_max_linear_damping_device = 30.0;
+    teleop_task->_max_angular_damping_device = 0.0;
+    teleop_task->_max_force_device = 12.0;
+    teleop_task->_max_torque_device = 0.0;
+  }
+  else
+  {
+	VectorXd _max_stiffness_device0 = redis_client.getEigenMatrixJSON(DEVICE_MAX_STIFFNESS_KEYS[0]);
+	VectorXd _max_damping_device0 = redis_client.getEigenMatrixJSON(DEVICE_MAX_DAMPING_KEYS[0]);
+	VectorXd _max_force_device0 = redis_client.getEigenMatrixJSON(DEVICE_MAX_FORCE_KEYS[0]);
 
-	// VectorXd _max_stiffness_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_STIFFNESS_KEYS[1]);
-	// VectorXd _max_damping_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_DAMPING_KEYS[1]);
-	// VectorXd _max_force_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_FORCE_KEYS[1]);
+	VectorXd _max_stiffness_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_STIFFNESS_KEYS[1]);
+	VectorXd _max_damping_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_DAMPING_KEYS[1]);
+	VectorXd _max_force_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_FORCE_KEYS[1]);
 
-	// set the device specifications to the haptic controller
-	// teleop_task->_max_linear_stiffness_device = _max_stiffness_device0[0];
-	// teleop_task->_max_angular_stiffness_device = _max_stiffness_device0[1];
-	// teleop_task->_max_linear_damping_device = _max_damping_device0[0];
-	// teleop_task->_max_angular_damping_device = _max_damping_device0[1];
-	// teleop_task->_max_force_device = _max_force_device0[0];
-	// teleop_task->_max_torque_device = _max_force_device0[1];
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  teleop_task->_max_linear_stiffness_device = 5000.0;
-	teleop_task->_max_angular_stiffness_device = 0.0;
-	teleop_task->_max_linear_damping_device = 30.0;
-	teleop_task->_max_angular_damping_device = 0.0;
-	teleop_task->_max_force_device = 12.0;
-	teleop_task->_max_torque_device = 0.0;
+	//set the device specifications to the haptic controller
+	teleop_task->_max_linear_stiffness_device = _max_stiffness_device0[0];
+	teleop_task->_max_angular_stiffness_device = _max_stiffness_device0[1];
+	teleop_task->_max_linear_damping_device = _max_damping_device0[0];
+	teleop_task->_max_angular_damping_device = _max_damping_device0[1];
+	teleop_task->_max_force_device = _max_force_device0[0];
+	teleop_task->_max_torque_device = _max_force_device0[1];
+  }
 
 	// Create robot commanded vectors
 	Vector3d desired_position_robot = Vector3d::Zero(); // Set position and orientation in robot frame
@@ -380,7 +382,6 @@ int main() {
 	Vector3d vel_trans_rob_model = Vector3d::Zero();
 	VectorXd f_task_sensed_sensor_point = VectorXd::Zero(6); // Sensed force in world frame at sensor point
 	VectorXd f_task_sensed_control_point = VectorXd::Zero(6); // Sensed force in world frame at control point
-
 
 	//// passivity observer and controller ////
 	auto passivity_controller = new Sai2Primitives::BilateralPassivityController(posori_task, teleop_task);
@@ -417,8 +418,6 @@ int main() {
 	redis_client.setEigenMatrixJSON(FORCE_SENSED_KEY,f_task_sensed_sensor_point);
 	redis_client.setEigenMatrixJSON(JOINT_TORQUES_SENSED_KEY,torques_sensed);
 
-
-
 	teleop_task->_haptic_feedback_from_proxy = false;
 	teleop_task->_filter_on = false;
 	double fc_force=0.06;
@@ -441,10 +440,12 @@ int main() {
 
 	// Add device workspace virtual limits
 	teleop_task->_add_workspace_virtual_limit=true;
-  // double device_workspace_radius_limit = 0.075;
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  double device_workspace_radius_limit = 0.2;
 	double device_workspace_angle_limit = 90*M_PI/180.0;
+  double device_workspace_radius_limit  = 0.08;
+  if (using_keyboard_input)
+  {
+    device_workspace_radius_limit = 0.2;
+  }
 	teleop_task->setWorkspaceLimits(device_workspace_radius_limit, device_workspace_angle_limit);
 
 	// Set-up guidance parameters
@@ -469,12 +470,13 @@ int main() {
   int release_counter_1 = 0;
   int release_counter_2 = 0;
   int release_counter_3 = 0;
-  int contact_duration = 1000; //increments to evaluate contact normal (1s)
+  int contact_duration = 200; //increments to evaluate contact normal (0.2s)
   double mean_contact_force = 0;
   Vector3d mean_contact_normal = Vector3d::Zero();
   Vector3d contact_force = Vector3d::Zero();
   Vector3d guidance_normal_vec_first = Vector3d::Zero();
   Vector3d guidance_normal_vec_second = Vector3d::Zero();
+  Vector3d guidance_normal_vec_third = Vector3d::Zero();
   Vector3d guidance_motion_vec = Vector3d::Zero();
 	Vector3d guidance_normal_vec = Vector3d::Zero();
   int nbr_force_direction = 0;
@@ -575,36 +577,39 @@ int main() {
     robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
     torques_sensed = redis_client.getEigenMatrixJSON(JOINT_TORQUES_SENSED_KEY);
     f_task_sensed_sensor_point = redis_client.getEigenMatrixJSON(FORCE_SENSED_KEY);
-    // Haptic device data
-    // teleop_task->_current_position_device = redis_client.getEigenMatrixJSON(DEVICE_POSITION_KEYS[0]);
-    // teleop_task->_current_rotation_device = redis_client.getEigenMatrixJSON(DEVICE_ROTATION_KEYS[0]);
-    // teleop_task->_current_trans_velocity_device = redis_client.getEigenMatrixJSON(DEVICE_TRANS_VELOCITY_KEYS[0]);
-    // teleop_task->_current_rot_velocity_device = redis_client.getEigenMatrixJSON(DEVICE_ROT_VELOCITY_KEYS[0]);
-    // teleop_task->_sensed_force_device = redis_client.getEigenMatrixJSON(DEVICE_SENSED_FORCE_KEYS[0]);
-    // teleop_task->_sensed_torque_device = redis_client.getEigenMatrixJSON(DEVICE_SENSED_TORQUE_KEYS[0]);
-    // teleop_task->_current_position_gripper_device = stod(redis_client.get(DEVICE_GRIPPER_POSITION_KEYS[0]));
-  	// teleop_task->_current_gripper_velocity_device = stod(redis_client.get(DEVICE_GRIPPER_VELOCITY_KEYS[0]));
     // read renabling/disabling teleoperation
   	remote_enabled = stoi(redis_client.get(REMOTE_ENABLED_KEY));
   	// read restar cycle key
   	restart_cycle = stoi(redis_client.get(RESTART_CYCLE_KEY));
+    // Haptic device data
+    if (using_keyboard_input)
+    {
+      // keyboard commands if no device
+      teleop_task->_current_position_device = redis_client.getEigenMatrixJSON(MOUSE_POSITION_KEY);
+      teleop_task->_current_trans_velocity_device.setZero();
+      teleop_task->_current_rotation_device.setIdentity();
+      teleop_task->_current_rot_velocity_device.setZero();
+      teleop_task->_sensed_force_device.setZero();
+      teleop_task->_sensed_torque_device.setZero();
+      mouse_gripper = stoi(redis_client.get(MOUSE_GRIPPER_KEY));
+    }
+    else
+    {
+      teleop_task->_current_position_device = redis_client.getEigenMatrixJSON(DEVICE_POSITION_KEYS[0]);
+      teleop_task->_current_rotation_device = redis_client.getEigenMatrixJSON(DEVICE_ROTATION_KEYS[0]);
+      teleop_task->_current_trans_velocity_device = redis_client.getEigenMatrixJSON(DEVICE_TRANS_VELOCITY_KEYS[0]);
+      teleop_task->_current_rot_velocity_device = redis_client.getEigenMatrixJSON(DEVICE_ROT_VELOCITY_KEYS[0]);
+      teleop_task->_sensed_force_device = redis_client.getEigenMatrixJSON(DEVICE_SENSED_FORCE_KEYS[0]);
+      teleop_task->_sensed_torque_device = redis_client.getEigenMatrixJSON(DEVICE_SENSED_TORQUE_KEYS[0]);
+      teleop_task->_current_position_gripper_device = stod(redis_client.get(DEVICE_GRIPPER_POSITION_KEYS[0]));
+      teleop_task->_current_gripper_velocity_device = stod(redis_client.get(DEVICE_GRIPPER_VELOCITY_KEYS[0]));
+    }
 
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // keybord commands if no device
-    teleop_task->_current_position_device = redis_client.getEigenMatrixJSON(MOUSE_POSITION_KEY);
-    teleop_task->_current_trans_velocity_device.setZero();
-    teleop_task->_current_rotation_device.setIdentity();
-    teleop_task->_current_rot_velocity_device.setZero();
-    teleop_task->_sensed_force_device.setZero();
-    teleop_task->_sensed_torque_device.setZero();
-    mouse_gripper = stoi(redis_client.get(MOUSE_GRIPPER_KEY));
-
-    if(controller_counter % 100 == 1)
+    if(controller_counter % 100 == 20)
 		{
     //cout << "Position device :" << (teleop_task->_current_position_device).transpose() << endl ;
     cout << "Uncontrolled sensed contact force :" << contact_force.transpose() << endl;
-    cout << "Commanded robot force :" << (posori_task->_desired_force).transpose() << endl;
+    //cout << "Commanded robot force :" << (posori_task->_desired_force).transpose() << endl;
     //cout << "Sensed robot force :" << (f_task_sensed_control_point.head(3)).transpose() << endl;
     //cout << "norm contact force :" << contact_force.norm() << endl;
     //cout << "robot displacement :" << robot_displacement.transpose() << endl;
@@ -612,7 +617,7 @@ int main() {
 
     cout <<  "Contact force state :" << nbr_force_direction << endl;
     cout << "First contact normal :"<< guidance_normal_vec_first.transpose() << endl;
-    cout << "Second contact normal :"<< guidance_normal_vec.transpose() << endl;
+    cout << "Second contact normal :"<< guidance_normal_vec_second.transpose() << endl;
     cout << "Motion direction" << guidance_motion_vec.transpose() << endl;
     }
 
@@ -643,7 +648,6 @@ int main() {
 
     teleop_task->updateVirtualProxyPositionVelocity(pos_rob_model, vel_trans_rob_model,
 														rot_rob_model, vel_rot_rob_model);
-
 
 		//Sensor frame rotation in world frame
 		robot->rotation(R_sensor, link_name);
@@ -676,21 +680,25 @@ int main() {
 
 		// Use the haptic device gripper as a switch and update the gripper state
 		teleop_task->UseGripperAsSwitch();
-		// Read new gripper state
-	    // gripper_state = teleop_task->gripper_state;
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    if (mouse_gripper==1)
+
+    // Read new gripper state
+    if (using_keyboard_input)
     {
-      gripper_state = true;
+      if (mouse_gripper==1)
+      {
+        gripper_state = true;
+      }
+      else
+      {
+        gripper_state = false;
+      }
     }
     else
     {
-      gripper_state = false;
+      gripper_state = teleop_task->gripper_state;
     }
 
-
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//// Run Robot/Haptic Device state machine ////
+		//////////////////////// Run Robot/Haptic Device state machine //////////////////////////////////////////////////
 		if(state == GOTO_INITIAL_CONFIG)
 		{
 			// update tasks model and priority
@@ -706,13 +714,18 @@ int main() {
 			joint_task->computeTorques(joint_task_torques);
 			command_torques = joint_task_torques + coriolis_torques;
 
-			// compute homing haptic device
-			//teleop_task->HomingTask();
-      //if( remote_enabled==1 && teleop_task->device_homed && gripper_state && (joint_task->_desired_position - joint_task->_current_position).norm() < 0.2)
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      if (!using_keyboard_input)
+      {
+  			// compute homing haptic device
+  			teleop_task->HomingTask();
+      }
+      else
+      {
+        teleop_task->device_homed = true;
+      }
 
 			// if((joint_task->_desired_position - joint_task->_current_position).norm() < 0.2)
-			if( remote_enabled==1 && gripper_state && (joint_task->_desired_position - joint_task->_current_position).norm() < 0.2)
+			if( remote_enabled==1 && teleop_task->device_homed && gripper_state && (joint_task->_desired_position - joint_task->_current_position).norm() < 0.2)
 			{
 
 				// Reinitialize controllers
@@ -748,94 +761,96 @@ int main() {
 			}
 		}
 
-		else if(state == IMPEDANCE_CONTROL)
-		{
-			//// Haptic impedance controller ////
-			//Compute haptic commands
-			teleop_task->computeHapticCommands3d(posori_task->_desired_position);
-
-			// update model and priority (position and joint tasks)
-			N_prec.setIdentity();
-			posori_task->updateTaskModel(N_prec);
-			N_prec = posori_task->_N;
-			joint_task->updateTaskModel(N_prec);
-
-			// Adjust mass matrix to increase wrist desired stiffness
-			if(!flag_simulation)
-			{
-				for(int i=3 ; i<6 ; i++)
-				{
-					posori_task->_Lambda(i,i) += 0.1;
-				}
-			}
-
-			// Compute commanded robot torques
-			posori_task->computeTorques(posori_task_torques);
-			joint_task->computeTorques(joint_task_torques);
-			command_torques = posori_task_torques + joint_task_torques + coriolis_torques;
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			// compute PO
-			//passivity_controller->computePOPCForce(haptic_damping_force_passivity);
-
-			// button code to change guidance type
-			if(gripper_state && gripper_state != gripper_state_prev) //if button pushed and no change recorded yet
-			{
-				// if button pushed
-				isPressed = true;
-			} else {
-				isPressed = false;
-			}
-			gripper_state_prev = gripper_state;
-
-			if(remote_enabled == 0) //Stop haptic teleoperation
-			{
-				joint_task->_kp = 250.0;
-				joint_task->_kv = 18.0;
-				joint_task->_ki = 0.0;
-				// joint controller to maintain robot in current position
-				joint_task->reInitializeTask();
-				teleop_task->reInitializeTask();
-				posori_task->reInitializeTask();
-
-				// set current haptic device position
-				teleop_task->setDeviceCenter(teleop_task->_current_position_device, teleop_task->_current_rotation_device);
-
-				state = MAINTAIN_POSITION;
-			}
-			else if(isPressed && switch_state_counter == 0) //If the button is pushed switch to unified haptic controller
-			{
-
-        // set up unified robot controller into pure motion control
-        nbr_force_direction = 0;
-				posori_task->setFullLinearMotionControl();
-        posori_task->setFullAngularMotionControl();
-
-				// Update the selection matrices for haptic controller
-				teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
-								 						posori_task->_sigma_force, posori_task->_sigma_moment);
-
-				// Switch to new haptic controller
-				teleop_task->reInitializeTask();
-				teleop_task->_haptic_feedback_from_proxy = false; // If set to true, the force feedback is computed from a stiffness/damping proxy.
-			  teleop_task->_filter_on = true;
-				teleop_task->_send_haptic_feedback = true;
-
-        pos_rob_model_prev = pos_rob_model;
-
-				passivity_controller->reInitializeTask();
-
-				switch_state_counter = 500;
-				t0 = current_time;
-				state = UNIFIED_CONTROL;
-			}
-
-			switch_state_counter--;
-			if(switch_state_counter < 0)
-			{
-				switch_state_counter = 0;
-			}
-		}
+// 		else if(state == IMPEDANCE_CONTROL)
+// 		{
+// 			//// Haptic impedance controller ////
+// 			//Compute haptic commands
+// 			teleop_task->computeHapticCommands3d(posori_task->_desired_position);
+//
+// 			// update model and priority (position and joint tasks)
+// 			N_prec.setIdentity();
+// 			posori_task->updateTaskModel(N_prec);
+// 			N_prec = posori_task->_N;
+// 			joint_task->updateTaskModel(N_prec);
+//
+// 			// Adjust mass matrix to increase wrist desired stiffness
+// 			if(!flag_simulation)
+// 			{
+// 				for(int i=3 ; i<6 ; i++)
+// 				{
+// 					posori_task->_Lambda(i,i) += 0.1;
+// 				}
+// 			}
+//
+// 			// Compute commanded robot torques
+// 			posori_task->computeTorques(posori_task_torques);
+// 			joint_task->computeTorques(joint_task_torques);
+// 			command_torques = posori_task_torques + joint_task_torques + coriolis_torques;
+//
+// 			if (!using_keyboard_input)
+//        {
+//         // compute PO
+// 			   passivity_controller->computePOPCForce(haptic_damping_force_passivity);
+//        }
+//
+// 			// button code to change guidance type
+// 			if(gripper_state && gripper_state != gripper_state_prev) //if button pushed and no change recorded yet
+// 			{
+// 				// if button pushed
+// 				isPressed = true;
+// 			} else {
+// 				isPressed = false;
+// 			}
+// 			gripper_state_prev = gripper_state;
+//
+// 			if(remote_enabled == 0) //Stop haptic teleoperation
+// 			{
+// 				joint_task->_kp = 250.0;
+// 				joint_task->_kv = 18.0;
+// 				joint_task->_ki = 0.0;
+// 				// joint controller to maintain robot in current position
+// 				joint_task->reInitializeTask();
+// 				teleop_task->reInitializeTask();
+// 				posori_task->reInitializeTask();
+//
+// 				// set current haptic device position
+// 				teleop_task->setDeviceCenter(teleop_task->_current_position_device, teleop_task->_current_rotation_device);
+//
+// 				state = MAINTAIN_POSITION;
+// 			}
+// 			else if(isPressed && switch_state_counter == 0) //If the button is pushed switch to unified haptic controller
+// 			{
+//
+//         // set up unified robot controller into pure motion control
+//         nbr_force_direction = 0;
+// 				posori_task->setFullLinearMotionControl();
+//         posori_task->setFullAngularMotionControl();
+//
+// 				// Update the selection matrices for haptic controller
+// 				teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
+// 								 						posori_task->_sigma_force, posori_task->_sigma_moment);
+//
+// 				// Switch to new haptic controller
+// 				teleop_task->reInitializeTask();
+// 				teleop_task->_haptic_feedback_from_proxy = false; // If set to true, the force feedback is computed from a stiffness/damping proxy.
+// 			  teleop_task->_filter_on = true;
+// 				teleop_task->_send_haptic_feedback = true;
+//
+//         pos_rob_model_prev = pos_rob_model;
+//
+// 				passivity_controller->reInitializeTask();
+//
+// 				switch_state_counter = 500;
+// 				t0 = current_time;
+// 				state = UNIFIED_CONTROL;
+// 			}
+//
+// 			switch_state_counter--;
+// 			if(switch_state_counter < 0)
+// 			{
+// 				switch_state_counter = 0;
+// 			}
+// 		}
 
 
 		else if(state == UNIFIED_CONTROL) {
@@ -854,7 +869,6 @@ int main() {
       if (disp_counter <= 100)
       {
         robot_total_displacement += robot_displacement;
-        // robot_displacement_contact = -1.0;
         disp_counter ++;
       }
       else
@@ -897,18 +911,22 @@ int main() {
                   break;
 
                case 1 : // One controlled contact force
+
+               guidance_normal_vec_first = guidance_normal_vec;
+
                // update force control direction in robot space for unified control
-         			posori_task->updateForceAxis(guidance_normal_vec);
+         			posori_task->updateForceAxis(guidance_normal_vec_first);
 
               teleop_task->_haptic_feedback_from_proxy = false;
 
               // Adjust force-controlled direction to stay normal to displacement
-              guidance_normal_vec = sigma_displacement*guidance_normal_vec;
+              guidance_normal_vec_first = sigma_displacement*guidance_normal_vec_first;
+
+              guidance_normal_vec = guidance_normal_vec_first;
 
               // Contact detection
               if (contact_force.norm() >= maintained_contact_threshold && robot_displacement_contact >= contact_displacement_threshold)
               {
-                guidance_normal_vec_first = guidance_normal_vec;
                 contact_counter = 0;
                 mean_contact_normal.setZero();
                 mean_contact_force = 0;
@@ -917,7 +935,7 @@ int main() {
               }
 
               // Contact release
-              if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+              if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
               {
                 release_counter_1 ++;
               }
@@ -927,27 +945,32 @@ int main() {
               }
               if (release_counter_1 >= contact_duration)
               {
+                guidance_normal_vec_first.setZero();
                 nbr_force_direction = nbr_force_direction-1;
               }
                   break;
 
                 case 2 : // Two controlled contact forces
+
+                guidance_normal_vec_second = guidance_normal_vec;
+
                 // Compute motion direction
-              guidance_motion_vec = guidance_normal_vec_first.cross(guidance_normal_vec);
+                guidance_motion_vec = guidance_normal_vec_first.cross(guidance_normal_vec_second);
 
                 // update force control direction in robot space for unified control
-               posori_task->updateLinearMotionAxis(guidance_motion_vec);
+                posori_task->updateLinearMotionAxis(guidance_motion_vec);
 
-               teleop_task->_haptic_feedback_from_proxy = false;
+                teleop_task->_haptic_feedback_from_proxy = false;
 
                // Adjust force-controlled direction to stay normal to displacement
-               guidance_normal_vec = sigma_displacement*guidance_normal_vec;
+               guidance_normal_vec_second = sigma_displacement*guidance_normal_vec_second;
                guidance_normal_vec_first = sigma_displacement*guidance_normal_vec_first;
+
+               guidance_normal_vec = guidance_normal_vec_second;
 
                // Contact detection
                if (contact_force.norm() >= maintained_contact_threshold && robot_displacement_contact >= contact_displacement_threshold)
                {
-                 guidance_normal_vec_second = guidance_normal_vec;
                  contact_counter = 0;
                  mean_contact_normal.setZero();
                  mean_contact_force = 0;
@@ -956,7 +979,7 @@ int main() {
                }
 
                // Contact release
-               if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+               if (guidance_normal_vec_second.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
                {
                  release_counter_2 ++;
                }
@@ -974,23 +997,27 @@ int main() {
                }
                if (release_counter_1 >= contact_duration)
                {
+                 guidance_normal_vec = guidance_normal_vec_second;
+                 guidance_normal_vec_second.setZero();
                  nbr_force_direction = nbr_force_direction-1;
                }
                if (release_counter_2 >= contact_duration)
                {
                  guidance_normal_vec = guidance_normal_vec_first;
+                 guidance_normal_vec_second.setZero();
                  nbr_force_direction = nbr_force_direction-1;
                }
                    break;
 
                 case 3 : // Full force control
+
+                guidance_normal_vec_third = guidance_normal_vec;
+
                 posori_task->setFullForceControl();
                 teleop_task->_haptic_feedback_from_proxy = false;
 
-
-
                 // Contact release
-                if (guidance_normal_vec.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+                if (guidance_normal_vec_third.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
                 {
                   release_counter_3 ++;
                 }
@@ -1017,15 +1044,19 @@ int main() {
                 if (release_counter_1 >= contact_duration)
                 {
                   guidance_normal_vec_first = guidance_normal_vec_second;
+                  guidance_normal_vec_second = guidance_normal_vec_third;
+                  guidance_normal_vec_third.setZero();
                   nbr_force_direction = nbr_force_direction-1;
                 }
                 if (release_counter_2 >= contact_duration)
                 {
+                  guidance_normal_vec_second = guidance_normal_vec_third;
+                  guidance_normal_vec_third.setZero();
                   nbr_force_direction = nbr_force_direction-1;
                 }
                 if (release_counter_3 >= contact_duration)
                 {
-                  guidance_normal_vec = guidance_normal_vec_second;
+                  guidance_normal_vec_third.setZero();
                   nbr_force_direction = nbr_force_direction-1;
                 }
                   break;
@@ -1102,12 +1133,11 @@ int main() {
 			joint_task->computeTorques(joint_task_torques);
 			command_torques = posori_task_torques + joint_task_torques + coriolis_torques;
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-			// compute PO
-			//passivity_controller->computePOPCForce(haptic_damping_force_passivity);
-
-
-
+      if (!using_keyboard_input)
+      {
+  			// compute PO
+  			passivity_controller->computePOPCForce(haptic_damping_force_passivity);
+      }
 
 
 
@@ -1248,12 +1278,10 @@ int main() {
   	redis_client.setEigenMatrixJSON(DEVICE_COMMANDED_FORCE_KEYS[0], command_force_device_plus_damping);
   	redis_client.setEigenMatrixJSON(DEVICE_COMMANDED_TORQUE_KEYS[0], teleop_task->_commanded_torque_device);
   	redis_client.set(DEVICE_COMMANDED_GRIPPER_FORCE_KEYS[0], to_string(teleop_task->_commanded_gripper_force_device));
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////::
-    redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_3,guidance_normal_vec);
+
+    redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_3,guidance_normal_vec_third);
     redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_1,guidance_normal_vec_first);
     redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_2,guidance_normal_vec_second);
-
-
 
 
 		prev_time = current_time;
