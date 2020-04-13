@@ -485,30 +485,57 @@ int main() {
 	bool isPressed = false;
 
 	// setup redis keys to be updated with the callback
-	// objects to read from redis
-	// redis_client.addEigenToRead(JOINT_ANGLES_KEY, robot->_q);
-	// redis_client.addEigenToRead(JOINT_VELOCITIES_KEY, robot->_dq);
-	// redis_client.addEigenToRead(JOINT_TORQUES_SENSED_KEY, torques_sensed);
-	// redis_client.addEigenToRead(DEVICE_POSITION_KEYS[0], teleop_task->_current_position_device);
-	// redis_client.addEigenToRead(DEVICE_ROTATION_KEYS[0], teleop_task->_current_rotation_device);
-	// redis_client.addEigenToRead(DEVICE_TRANS_VELOCITY_KEYS[0], teleop_task->_current_trans_velocity_device);
-	// redis_client.addEigenToRead(DEVICE_ROT_VELOCITY_KEYS[0], teleop_task->_current_rot_velocity_device);
-  //
-	// redis_client.addEigenToRead(FORCE_SENSED_KEY, f_task_sensed_sensor_point);
-	// redis_client.addEigenToRead(DEVICE_SENSED_FORCE_KEYS[0], teleop_task->_sensed_force_device);
-	// redis_client.addEigenToRead(DEVICE_SENSED_TORQUE_KEYS[0], teleop_task->_sensed_torque_device);
-  //
-	// redis_client.addIntToRead(REMOTE_ENABLED_KEY, remote_enabled);
-	// redis_client.addIntToRead(RESTART_CYCLE_KEY, restart_cycle);
-  //
-	// redis_client.addDoubleToRead(DEVICE_GRIPPER_POSITION_KEYS[0], teleop_task->_current_position_gripper_device);
-	// redis_client.addDoubleToRead(DEVICE_GRIPPER_VELOCITY_KEYS[0], teleop_task->_current_gripper_velocity_device);
-  //
-	// // objects to write to redis
-	// redis_client.addEigenToWrite(JOINT_TORQUES_COMMANDED_KEY, command_torques);
-	// redis_client.addEigenToWrite(DEVICE_COMMANDED_FORCE_KEYS[0], command_force_device_plus_damping);
-	// redis_client.addEigenToWrite(DEVICE_COMMANDED_TORQUE_KEYS[0], teleop_task->_commanded_torque_device);
-	// redis_client.addDoubleToWrite(DEVICE_COMMANDED_GRIPPER_FORCE_KEYS[0], teleop_task->_commanded_gripper_force_device);
+  redis_client.createReadCallback(0);
+  redis_client.createWriteCallback(0);
+
+	// Objects to read from redis
+  //read robot data
+	redis_client.addEigenToReadCallback(0, JOINT_ANGLES_KEY, robot->_q);
+	redis_client.addEigenToReadCallback(0, JOINT_VELOCITIES_KEY, robot->_dq);
+	redis_client.addEigenToReadCallback(0, JOINT_TORQUES_SENSED_KEY, torques_sensed);
+	redis_client.addEigenToReadCallback(0, FORCE_SENSED_KEY, f_task_sensed_sensor_point);
+  if(!flag_simulation) // update coriolis and mass matrix from robot
+  {
+    redis_client.addEigenToReadCallback(0, MASSMATRIX_KEY, robot->_M);
+    redis_client.addEigenToReadCallback(0, CORIOLIS_KEY, coriolis_torques);
+    redis_client.addEigenToReadCallback(0, ROBOT_GRAVITY_KEY, gravity_torques);
+  }
+  // read status
+	redis_client.addIntToReadCallback(0, REMOTE_ENABLED_KEY, remote_enabled);
+	redis_client.addIntToReadCallback(0, RESTART_CYCLE_KEY, restart_cycle);
+  if(using_keyboard_input) //use keyboard inputs
+  {
+    redis_client.addEigenToReadCallback(0, MOUSE_POSITION_KEY, teleop_task->_current_position_device);
+    teleop_task->_current_trans_velocity_device.setZero();
+    teleop_task->_current_rotation_device.setIdentity();
+    teleop_task->_current_rot_velocity_device.setZero();
+    teleop_task->_sensed_force_device.setZero();
+    teleop_task->_sensed_torque_device.setZero();
+    redis_client.addIntToReadCallback(0, MOUSE_GRIPPER_KEY, mouse_gripper);
+  }
+  else //read haptic device data
+  {
+    redis_client.addEigenToReadCallback(0, DEVICE_POSITION_KEYS[0], teleop_task->_current_position_device);
+    redis_client.addEigenToReadCallback(0, DEVICE_ROTATION_KEYS[0], teleop_task->_current_rotation_device);
+    redis_client.addEigenToReadCallback(0, DEVICE_TRANS_VELOCITY_KEYS[0], teleop_task->_current_trans_velocity_device);
+    redis_client.addEigenToReadCallback(0, DEVICE_ROT_VELOCITY_KEYS[0], teleop_task->_current_rot_velocity_device);
+    redis_client.addEigenToReadCallback(0, DEVICE_SENSED_FORCE_KEYS[0], teleop_task->_sensed_force_device);
+    redis_client.addEigenToReadCallback(0, DEVICE_SENSED_TORQUE_KEYS[0], teleop_task->_sensed_torque_device);
+    redis_client.addDoubleToReadCallback(0, DEVICE_GRIPPER_POSITION_KEYS[0], teleop_task->_current_position_gripper_device);
+    redis_client.addDoubleToReadCallback(0, DEVICE_GRIPPER_VELOCITY_KEYS[0], teleop_task->_current_gripper_velocity_device);
+  }
+
+  // Objects to write to redis
+  // write robot commands
+  redis_client.addEigenToWriteCallback(0, JOINT_TORQUES_COMMANDED_KEY, command_torques);
+  //write haptic commands
+  redis_client.addEigenToWriteCallback(0, DEVICE_COMMANDED_FORCE_KEYS[0], command_force_device_plus_damping);
+  redis_client.addEigenToWriteCallback(0, DEVICE_COMMANDED_TORQUE_KEYS[0], teleop_task->_commanded_torque_device);
+  redis_client.addDoubleToWriteCallback(0, DEVICE_COMMANDED_GRIPPER_FORCE_KEYS[0], teleop_task->_commanded_gripper_force_device);
+  //write data for display
+  redis_client.addEigenToWriteCallback(0,CONTROLLED_CONTACT_DIRECTION_3,guidance_normal_vec_third);
+  redis_client.addEigenToWriteCallback(0,CONTROLLED_CONTACT_DIRECTION_1,guidance_normal_vec_first);
+  redis_client.addEigenToWriteCallback(0,CONTROLLED_CONTACT_DIRECTION_2,guidance_normal_vec_second);
 
 	// logging to redis
 	// redis_client.addDoubleToWrite(LOGGING_TIME_KEY, current_time);
@@ -570,56 +597,8 @@ int main() {
 		f_virtual_rot_rob_frame = teleop_task->_Rotation_Matrix_DeviceToRobot.transpose() * teleop_task->_f_virtual_rot;
 
 		// read all redis keys
-		//redis_client.readAllSetupValues();
+		redis_client.executeReadCallback(0);
 
-    // Robot data
-    robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
-    robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
-    torques_sensed = redis_client.getEigenMatrixJSON(JOINT_TORQUES_SENSED_KEY);
-    f_task_sensed_sensor_point = redis_client.getEigenMatrixJSON(FORCE_SENSED_KEY);
-    // read renabling/disabling teleoperation
-  	remote_enabled = stoi(redis_client.get(REMOTE_ENABLED_KEY));
-  	// read restar cycle key
-  	restart_cycle = stoi(redis_client.get(RESTART_CYCLE_KEY));
-    // Haptic device data
-    if (using_keyboard_input)
-    {
-      // keyboard commands if no device
-      teleop_task->_current_position_device = redis_client.getEigenMatrixJSON(MOUSE_POSITION_KEY);
-      teleop_task->_current_trans_velocity_device.setZero();
-      teleop_task->_current_rotation_device.setIdentity();
-      teleop_task->_current_rot_velocity_device.setZero();
-      teleop_task->_sensed_force_device.setZero();
-      teleop_task->_sensed_torque_device.setZero();
-      mouse_gripper = stoi(redis_client.get(MOUSE_GRIPPER_KEY));
-    }
-    else
-    {
-      teleop_task->_current_position_device = redis_client.getEigenMatrixJSON(DEVICE_POSITION_KEYS[0]);
-      teleop_task->_current_rotation_device = redis_client.getEigenMatrixJSON(DEVICE_ROTATION_KEYS[0]);
-      teleop_task->_current_trans_velocity_device = redis_client.getEigenMatrixJSON(DEVICE_TRANS_VELOCITY_KEYS[0]);
-      teleop_task->_current_rot_velocity_device = redis_client.getEigenMatrixJSON(DEVICE_ROT_VELOCITY_KEYS[0]);
-      teleop_task->_sensed_force_device = redis_client.getEigenMatrixJSON(DEVICE_SENSED_FORCE_KEYS[0]);
-      teleop_task->_sensed_torque_device = redis_client.getEigenMatrixJSON(DEVICE_SENSED_TORQUE_KEYS[0]);
-      teleop_task->_current_position_gripper_device = stod(redis_client.get(DEVICE_GRIPPER_POSITION_KEYS[0]));
-      teleop_task->_current_gripper_velocity_device = stod(redis_client.get(DEVICE_GRIPPER_VELOCITY_KEYS[0]));
-    }
-
-    if(controller_counter % 100 == 20)
-		{
-    //cout << "Position device :" << (teleop_task->_current_position_device).transpose() << endl ;
-    cout << "Uncontrolled sensed contact force :" << contact_force.transpose() << endl;
-    //cout << "Commanded robot force :" << (posori_task->_desired_force).transpose() << endl;
-    //cout << "Sensed robot force :" << (f_task_sensed_control_point.head(3)).transpose() << endl;
-    //cout << "norm contact force :" << contact_force.norm() << endl;
-    //cout << "robot displacement :" << robot_displacement.transpose() << endl;
-    cout << "robot displacement in contact direction : " << robot_displacement_contact << endl;
-
-    cout <<  "Contact force state :" << nbr_force_direction << endl;
-    cout << "First contact normal :"<< guidance_normal_vec_first.transpose() << endl;
-    cout << "Second contact normal :"<< guidance_normal_vec_second.transpose() << endl;
-    cout << "Motion direction" << guidance_motion_vec.transpose() << endl;
-    }
 
 		// Update robot model
 		if(flag_simulation)
@@ -631,11 +610,7 @@ int main() {
 		else
 		{
 			robot->updateKinematics();
-			robot->_M = redis_client.getEigenMatrixJSON(MASSMATRIX_KEY);
 			robot->_M_inv = robot->_M.inverse();
-
-			coriolis_torques = redis_client.getEigenMatrixJSON(CORIOLIS_KEY);
-			gravity_torques = redis_client.getEigenMatrixJSON(ROBOT_GRAVITY_KEY);
 		}
 
 		// Update position and orientation of the robot from the model
@@ -697,6 +672,25 @@ int main() {
     {
       gripper_state = teleop_task->gripper_state;
     }
+
+
+
+    if(controller_counter % 100 == 20)
+    {
+      //cout << "Position device :" << (teleop_task->_current_position_device).transpose() << endl ;
+      cout << "Uncontrolled sensed contact force :" << contact_force.transpose() << endl;
+      //cout << "Commanded robot force :" << (posori_task->_desired_force).transpose() << endl;
+      //cout << "Sensed robot force :" << (f_task_sensed_control_point.head(3)).transpose() << endl;
+      //cout << "norm contact force :" << contact_force.norm() << endl;
+      //cout << "robot displacement :" << robot_displacement.transpose() << endl;
+      cout << "robot displacement in contact direction : " << robot_displacement_contact << endl;
+
+      cout <<  "Contact force state :" << nbr_force_direction << endl;
+      cout << "First contact normal :"<< guidance_normal_vec_first.transpose() << endl;
+      cout << "Second contact normal :"<< guidance_normal_vec_second.transpose() << endl;
+      cout << "Motion direction" << guidance_motion_vec.transpose() << endl;
+    }
+
 
 		//////////////////////// Run Robot/Haptic Device state machine //////////////////////////////////////////////////
 		if(state == GOTO_INITIAL_CONFIG)
@@ -1269,29 +1263,17 @@ int main() {
 		//command_force_device_plus_damping = teleop_task->_commanded_force_device;
 		// command_force_device_plus_damping.setZero();
 
-
-		//redis_client.writeAllSetupValues();
-
-    //// Send robot commands through redis ////
-  	redis_client.setEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY, command_torques);
-  	//// Send the haptic commands to the device driver through Redis keys ////
-  	redis_client.setEigenMatrixJSON(DEVICE_COMMANDED_FORCE_KEYS[0], command_force_device_plus_damping);
-  	redis_client.setEigenMatrixJSON(DEVICE_COMMANDED_TORQUE_KEYS[0], teleop_task->_commanded_torque_device);
-  	redis_client.set(DEVICE_COMMANDED_GRIPPER_FORCE_KEYS[0], to_string(teleop_task->_commanded_gripper_force_device));
-
-    redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_3,guidance_normal_vec_third);
-    redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_1,guidance_normal_vec_first);
-    redis_client.setEigenMatrixJSON(CONTROLLED_CONTACT_DIRECTION_2,guidance_normal_vec_second);
-
+    //// Send commands through redis ////
+    redis_client.executeWriteCallback(0);
 
 		prev_time = current_time;
 		controller_counter++;
 	}
 
+  //// Send zero force/torque to robot and haptic device through Redis keys ////
 	command_torques.setZero(robot->dof());
 	redis_client.setEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 
-	//// Send the haptic commands to the device driver through Redis keys ////
 	redis_client.setEigenMatrixJSON(DEVICE_COMMANDED_FORCE_KEYS[0], Vector3d::Zero());
 	redis_client.setEigenMatrixJSON(DEVICE_COMMANDED_TORQUE_KEYS[0], Vector3d::Zero());
 	redis_client.set(DEVICE_COMMANDED_GRIPPER_FORCE_KEYS[0], "0.0");
