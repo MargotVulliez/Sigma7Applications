@@ -10,7 +10,6 @@
 // Include task primitives from 'sai2-primitives'
 #include "tasks/JointTask.h"
 #include "tasks/PosOriTask.h"
-#include "tasks/OrientationTask.h"
 #include "haptic_tasks/HapticController.h"
 #include "haptic_tasks/BilateralPassivityController.h"
 
@@ -44,8 +43,8 @@ unsigned long long controller_counter = 0;
 
 const bool inertia_regularization = true;
 
-const bool flag_simulation = true;
-// const bool flag_simulation = false;
+// const bool flag_simulation = true;
+const bool flag_simulation = false;
 
 const bool autonomous_aligment = true;
 
@@ -195,7 +194,7 @@ int main() {
 	Eigen::Affine3d robot_pose_in_world = Affine3d::Identity();
 	// robot_pose_in_world.translation() = Vector3d(0, -0.5, 0.0);
 	//robot_pose_in_world.linear() = Matrix3d::Identity ();
-	robot_pose_in_world.linear() = AngleAxisd(0.3010693, Vector3d::UnitZ()).toRotationMatrix();
+	// robot_pose_in_world.linear() = AngleAxisd(0.3010693, Vector3d::UnitZ()).toRotationMatrix();
 	Matrix3d R_tool = Matrix3d::Identity(); 
 	
 	// start redis client
@@ -233,8 +232,9 @@ int main() {
 	// Define goal position according to the desired posture ///////////////////////////////////////////////////////////////////////////////////////////////// 
 	VectorXd goal_posture(robot->dof());
 	// goal_posture << 0.917648,-0.281587,0.127892,-1.93048,-0.0188945,1.67564,0.729007;
-	goal_posture << -0.0818928,0.0794155,0.580881,-1.59559,-0.0234656,1.66133,-1.11493;
+	// goal_posture << -0.0818928,0.0794155,0.580881,-1.59559,-0.0234656,1.66133,-1.11493;
 	// goal_posture << 0.194083,0.592397,0.293649,-1.73701,-0.252896,2.31038,-1.13493;
+	goal_posture << 0.0,-0.618209,0.0,-2.27868,0.0,1.65988,0.0;
 	//goal_posture = joint_task->_current_position;
 	joint_task->_desired_position = goal_posture;
 
@@ -256,14 +256,14 @@ int main() {
 
 	posori_task->_kp_pos = 150.0;
 	posori_task->_kv_pos = 16.0;
-	posori_task->_kp_ori = 300.0;
-	posori_task->_kv_ori = 18.0;
+	posori_task->_kp_ori = 550.0;
+	posori_task->_kv_ori = 22.0;
 	posori_task->_ki_pos = 0.0;
 	posori_task->_ki_ori = 0.0;
 
-	posori_task->_kp_force = 0.1;
+	posori_task->_kp_force = 0.5;
 	posori_task->_kv_force = 5.0;
-	posori_task->_ki_force = 0.05;
+	posori_task->_ki_force = 0.4;
 	posori_task->_kp_moment = 0.5;
 	posori_task->_kv_moment = 10.0;
 	posori_task->_ki_moment = 1.5;
@@ -277,14 +277,6 @@ int main() {
 	// 				  0.0, 0.0, -1.0;
 	// posori_task->_desired_position = centerPos_rob;
 	// posori_task->_desired_orientation = centerRot_rob;
-
-	auto ori_task = new Sai2Primitives::OrientationTask(robot, link_name, pos_in_link);
-
-	ori_task->_kp = 300.0;
-	ori_task->_kv = 18.0;
-
-	VectorXd ori_task_torques = VectorXd::Zero(7);
-
 
 	////Haptic teleoperation controller ////
 	Eigen::Matrix3d transformDev_Rob = robot_pose_in_world.linear();
@@ -311,10 +303,10 @@ int main() {
 
 	double force_guidance_position_impedance = 1000.0;
 	double force_guidance_orientation_impedance = 50.0;
-	double force_guidance_position_damping = 12.0;
-	double force_guidance_orientation_damping = 0.05;
+	double force_guidance_position_damping = 5.0;
+	double force_guidance_orientation_damping = 0.1;
 	teleop_task->setVirtualGuidanceGains (force_guidance_position_impedance, force_guidance_position_damping,
-									force_guidance_orientation_impedance, force_guidance_orientation_damping);	
+									force_guidance_orientation_impedance, force_guidance_orientation_damping);
 
 	// Set haptic controllers parameters
 	Matrix3d Red_factor_rot = Matrix3d::Identity();
@@ -322,9 +314,9 @@ int main() {
 	Red_factor_rot << 1/10.0, 0.0, 0.0,
 						  0.0, 1/10.0, 0.0,
 						  0.0, 0.0, 1/10.0;
-	Red_factor_trans << 1.0/1.5, 0.0, 0.0,
-						  0.0, 1.0/1.5, 0.0,
-						  0.0, 0.0, 1.0/1.5;
+	Red_factor_trans << 1.0/1.0, 0.0, 0.0,
+						  0.0, 1.0/1.0, 0.0,
+						  0.0, 0.0, 1.0/1.0;
 	double kp_robot_trans_velocity = 10.0;
 	double ki_robot_trans_velocity = 0.0;
 	double kp_robot_rot_velocity =10.0;
@@ -583,8 +575,6 @@ int main() {
 		f_task_sensed_control_point.tail(3) = -posori_task->_sensed_moment;
 		teleop_task->updateSensedForce(f_task_sensed_control_point);
 
-		//cout << "task force in world frame" << f_task_sensed_control_point.transpose() << endl;
-		
 		// Use the haptic device gripper as a switch and update the gripper state
 		teleop_task->UseGripperAsSwitch();
 		// Read new gripper state
@@ -619,12 +609,9 @@ int main() {
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
 				teleop_task->reInitializeTask();
-				// posori_task->_desired_position(2) -= 0.01;
 
-				posori_task->_desired_orientation << 0, 1, 0, 1, 0, 0, 0, 0, -1;
-
-				ori_task->reInitializeTask();
-				ori_task->_desired_orientation << 0, 1, 0, 1, 0, 0, 0, 0, -1;
+				// cout << posori_task->_desired_orientation << endl;
+				posori_task->_desired_orientation << 1, 0, 0, 0, -1, 0, 0, 0, -1;
 
 				joint_task->_kp = 50.0;
 				joint_task->_kv = 14.0;
@@ -668,12 +655,6 @@ int main() {
 				{
 					posori_task->_Lambda(i,i) += 0.1;
 				}
-				// cout << posori_task->_Lambda(0,2) << endl;
-				// cout << posori_task->_Lambda << endl << endl;
-				
-				// double coupling_correction = 5.0;
-				// posori_task->_Lambda(0,2) += coupling_correction;
-				// posori_task->_Lambda(2,0) += coupling_correction;
 			}
 
 			// Compute commanded robot torques
@@ -715,21 +696,17 @@ int main() {
 				robot->rotation(R_tool, link_name);
 				guidance_normal_vec = R_tool.col(2);
 
-				// cout << "End-effector normal vector: " << guidance_normal_vec.transpose() << endl;
-
 				// set up unified force control along normal vector in robot space and torque control in the orthogonal space
 				posori_task->setForceAxis(guidance_normal_vec);
-				// posori_task->setAngularMotionAxis(guidance_normal_vec);
 
 				// Update the selection matrices for haptic controller
 				teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
 								 						posori_task->_sigma_force, posori_task->_sigma_moment);
 
 				posori_task->_desired_force = - Ks * transformDev_Rob.transpose()*teleop_task->_commanded_force_device;
-				// posori_task->_desired_moment = Vector3d::Zero();
 
 				posori_task->setClosedLoopForceControl();
-				// posori_task->setClosedLoopMomentControl();
+				posori_task->_passivity_enabled = true;
 
 				// Switch to new haptic controller
 				teleop_task->reInitializeTask();
@@ -738,11 +715,6 @@ int main() {
 				teleop_task->_send_haptic_feedback = true;
 
 				passivity_controller->reInitializeTask();
-
-				Vector3d rpos = Vector3d::Zero();
-				robot->position(rpos, link_name, pos_in_link);
-				xy_desired = rpos.head(2);
-				cout << xy_desired.transpose() << endl << endl;
 
 				switch_state_counter = 500;
 				t0 = current_time;
@@ -763,93 +735,24 @@ int main() {
 			posori_task->updateTaskModel(N_prec);
 			N_prec = posori_task->_N;
 			joint_task->updateTaskModel(N_prec);
-			
-
-			// MatrixXd Jz, Jz_bar, Nz;
-			// MatrixXd Mz = MatrixXd::Zero(1,1);
-			// Jz.setZero(1,7);
-			// Jz_bar.setZero(7,1);
-			// Nz.setZero(7,7);
-
-			// MatrixXd Jxy, Jxy_bar, Nxy;
-			// MatrixXd Mxy = MatrixXd::Zero(2,2);
-			// Jxy.setZero(2,7);
-			// Jxy_bar.setZero(7,2);
-			// Nxy.setZero(7,7);
-
-			// MatrixXd Jv = MatrixXd::Zero(3,7);
-			// robot->Jv(Jv, link_name, pos_in_link);
-
-			// Jz = Jv.block<1,7>(2,0);
-			// Jxy = Jv.block<2,7>(0,0);
-
-			// robot->operationalSpaceMatrices(Mz, Jz_bar, Nz, Jz);
-			// Jxy = Jxy * Nz;
-			// robot->operationalSpaceMatrices(Mxy, Jxy_bar, Nxy, Jxy, Nz);
-			// N_prec = Nxy * Nz;
-			// ori_task->updateTaskModel(N_prec);
-			// N_prec = ori_task->_N;
-			// joint_task->updateTaskModel(N_prec);
-
-			// // cout << "Jz :\n" << Jz << endl;
-			// // cout << "Jxy :\n" << Jxy << endl;
-			// // cout << endl;
-
-			// VectorXd z_torques = VectorXd::Zero(7);
-			// VectorXd dz = Jz * robot->_dq;
-
-			// VectorXd Fz = -5.0 * dz;
-
-			// Vector3d robot_position = Vector3d::Zero();
-			// robot->position(robot_position, link_name, pos_in_link);
-			// VectorXd xy = robot_position.head(2);
-			// VectorXd dxy = Jxy * robot->_dq;
-			// // VectorXd xy_desired = VectorXd::Zero(2);
-			// // xy_desired(1) = 0.3;
-			// xy_desired(0) = 0.5 + 0.07*sin(2*M_PI*0.5*(current_time-t0));;
-
-
-			// VectorXd Fxy = Mxy * ( -150.0 * (xy - xy_desired) - 15.0 * dxy);
-
-			// VectorXd pos_task_torques = Jz.transpose() * Fz + Jxy.transpose() * Fxy;
-
 
 			//// Unified haptic controller ////
 
 			//Get the end-effector axis in robot frame
 			robot->rotation(R_tool, link_name);
 			guidance_normal_vec = R_tool.col(2);
+
 			// update normal local vector in robot space for unified control
 			posori_task->updateForceAxis(guidance_normal_vec);
-			// posori_task->updateAngularMotionAxis(guidance_normal_vec);
+
 			// Update the selection matrices for haptic controller
 			teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
 							 						posori_task->_sigma_force, posori_task->_sigma_moment);
 			
 			//Compute haptic commands
-			// if (autonomous_aligment)
-			// {
-			// 	teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
-			// 													posori_task->_desired_force, desired_torque_robot);
-		
-			// }
-			// else
-			// {
-			// 	teleop_task->computeHapticCommandsUnifiedControl6d(posori_task->_desired_position, posori_task->_desired_orientation,
-			// 													posori_task->_desired_force, posori_task->_desired_moment);	
-			// }
 			teleop_task->computeHapticCommandsUnifiedControl3d(posori_task->_desired_position, posori_task->_desired_force);
 
-			// cout << posori_task->_desired_force.transpose() << endl;
-			// cout << teleop_task->_commanded_force_device.transpose() << endl;
-			// cout << endl;
-
-			posori_task->_desired_force(2) -= 5.0;
-			// teleop_task->_commanded_force_device(2) += 7.0;
-
-			// posori_task->_desired_force(2) = 0.0;
-			// posori_task->_desired_position(0) = 0.4 + 0.1*sin(2*M_PI*0.5*(current_time-t0));
-
+			posori_task->_desired_force(2) -= 3.0;
 
 			// Adjust mass matrix to increase wrist desired stiffness
 			if(!flag_simulation)
@@ -858,27 +761,21 @@ int main() {
 				{
 					posori_task->_Lambda(i,i) += 0.1;
 				}
-				// cout << posori_task->_Lambda(0,2) << endl;
-				// cout << posori_task->_Lambda << endl << endl;
 				
-				double coupling_correction = 3.5;
-				posori_task->_Lambda(0,2) += coupling_correction;
-				posori_task->_Lambda(2,0) += coupling_correction;
+				// double coupling_correction = 0.0;
+				// coupling_correction = 3.5;
+				// posori_task->_Lambda(0,2) += coupling_correction;
+				// posori_task->_Lambda(2,0) += coupling_correction;
 			}
 
 			
 			// Compute torques
-			// ori_task->computeTorques(ori_task_torques);
 			posori_task->computeTorques(posori_task_torques);
 			joint_task->computeTorques(joint_task_torques);
 			command_torques = posori_task_torques + joint_task_torques + coriolis_torques;
-			// command_torques = pos_task_torques + ori_task_torques + joint_task_torques + coriolis_torques;
 
 			// compute PO
 			passivity_controller->computePOPCForce(haptic_damping_force_passivity);
-
-			// teleop_task->_commanded_force_device.setZero();
-
 
 			// button code to change guidance type
 			if(gripper_state && gripper_state != gripper_state_prev) //if button pushed and no change recorded yet
