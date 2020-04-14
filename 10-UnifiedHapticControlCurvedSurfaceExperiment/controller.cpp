@@ -200,7 +200,7 @@ int main() {
 	/////////////////////////////// init ////////////////////////////////////////
 	Eigen::Affine3d robot_pose_in_world = Affine3d::Identity();
 	// robot_pose_in_world.translation() = Vector3d(0, -0.5, 0.0);
-	robot_pose_in_world.linear() = Matrix3d::Identity ();
+	robot_pose_in_world.linear() = Matrix3d::Identity();
 	//robot_pose_in_world.linear() = AngleAxisd(0.3010693, Vector3d::UnitZ()).toRotationMatrix();
 	Matrix3d R_tool = Matrix3d::Identity(); 
 	
@@ -449,77 +449,79 @@ int main() {
 	
 	// setup redis keys to be updated with the callback
 	// objects to read from redis
-	redis_client.addEigenToRead(JOINT_ANGLES_KEY, robot->_q);
-	redis_client.addEigenToRead(JOINT_VELOCITIES_KEY, robot->_dq);
-	redis_client.addEigenToRead(JOINT_TORQUES_SENSED_KEY, torques_sensed);
-	redis_client.addEigenToRead(DEVICE_POSITION_KEYS[0], teleop_task->_current_position_device);
-	redis_client.addEigenToRead(DEVICE_ROTATION_KEYS[0], teleop_task->_current_rotation_device);
-	redis_client.addEigenToRead(DEVICE_TRANS_VELOCITY_KEYS[0], teleop_task->_current_trans_velocity_device);
-	redis_client.addEigenToRead(DEVICE_ROT_VELOCITY_KEYS[0], teleop_task->_current_rot_velocity_device);
+	redis_client.createReadCallback(0);
+	redis_client.addEigenToReadCallback(0, JOINT_ANGLES_KEY, robot->_q);
+	redis_client.addEigenToReadCallback(0, JOINT_VELOCITIES_KEY, robot->_dq);
+	redis_client.addEigenToReadCallback(0, JOINT_TORQUES_SENSED_KEY, torques_sensed);
+	redis_client.addEigenToReadCallback(0, DEVICE_POSITION_KEYS[0], teleop_task->_current_position_device);
+	redis_client.addEigenToReadCallback(0, DEVICE_ROTATION_KEYS[0], teleop_task->_current_rotation_device);
+	redis_client.addEigenToReadCallback(0, DEVICE_TRANS_VELOCITY_KEYS[0], teleop_task->_current_trans_velocity_device);
+	redis_client.addEigenToReadCallback(0, DEVICE_ROT_VELOCITY_KEYS[0], teleop_task->_current_rot_velocity_device);
 
-	redis_client.addEigenToRead(CONTACT_POINT_KEY, contact_point);
-	redis_client.addEigenToRead(CONTACT_NORMAL_KEY, contact_normal);
+	redis_client.addEigenToReadCallback(0, CONTACT_POINT_KEY, contact_point);
+	redis_client.addEigenToReadCallback(0, CONTACT_NORMAL_KEY, contact_normal);
 
-	redis_client.addEigenToRead(FORCE_SENSED_KEY, f_task_sensed_sensor_point);
-	redis_client.addEigenToRead(DEVICE_SENSED_FORCE_KEYS[0], teleop_task->_sensed_force_device);
-	redis_client.addEigenToRead(DEVICE_SENSED_TORQUE_KEYS[0], teleop_task->_sensed_torque_device);
+	redis_client.addEigenToReadCallback(0, FORCE_SENSED_KEY, f_task_sensed_sensor_point);
+	redis_client.addEigenToReadCallback(0, DEVICE_SENSED_FORCE_KEYS[0], teleop_task->_sensed_force_device);
+	redis_client.addEigenToReadCallback(0, DEVICE_SENSED_TORQUE_KEYS[0], teleop_task->_sensed_torque_device);
 
-	redis_client.addIntToRead(REMOTE_ENABLED_KEY, remote_enabled);
-	redis_client.addIntToRead(RESTART_CYCLE_KEY, restart_cycle);
+	redis_client.addIntToReadCallback(0, REMOTE_ENABLED_KEY, remote_enabled);
+	redis_client.addIntToReadCallback(0, RESTART_CYCLE_KEY, restart_cycle);
 
-	redis_client.addDoubleToRead(DEVICE_GRIPPER_POSITION_KEYS[0], teleop_task->_current_position_gripper_device);
-	redis_client.addDoubleToRead(DEVICE_GRIPPER_VELOCITY_KEYS[0], teleop_task->_current_gripper_velocity_device);
+	redis_client.addDoubleToReadCallback(0, DEVICE_GRIPPER_POSITION_KEYS[0], teleop_task->_current_position_gripper_device);
+	redis_client.addDoubleToReadCallback(0, DEVICE_GRIPPER_VELOCITY_KEYS[0], teleop_task->_current_gripper_velocity_device);
 
 	// objects to write to redis
-	redis_client.addEigenToWrite(JOINT_TORQUES_COMMANDED_KEY, command_torques);
-	redis_client.addEigenToWrite(DEVICE_COMMANDED_FORCE_KEYS[0], command_force_device_plus_damping);
-	redis_client.addEigenToWrite(DEVICE_COMMANDED_TORQUE_KEYS[0], command_torque_device_plus_damping);
-	redis_client.addDoubleToWrite(DEVICE_COMMANDED_GRIPPER_FORCE_KEYS[0], teleop_task->_commanded_gripper_force_device);
+	redis_client.createWriteCallback(0);
+	redis_client.addEigenToWriteCallback(0, JOINT_TORQUES_COMMANDED_KEY, command_torques);
+	redis_client.addEigenToWriteCallback(0, DEVICE_COMMANDED_FORCE_KEYS[0], command_force_device_plus_damping);
+	redis_client.addEigenToWriteCallback(0, DEVICE_COMMANDED_TORQUE_KEYS[0], command_torque_device_plus_damping);
+	redis_client.addDoubleToWriteCallback(0, DEVICE_COMMANDED_GRIPPER_FORCE_KEYS[0], teleop_task->_commanded_gripper_force_device);
 
 	// logging to redis
-	redis_client.addDoubleToWrite(LOGGING_TIME_KEY, current_time);
+	redis_client.addDoubleToWriteCallback(0, LOGGING_TIME_KEY, current_time);
 
-	redis_client.addEigenToWrite(LOGGING_ROBOT_JOINT_ANGLES, robot->_q);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_JOINT_VELOCITIES, robot->_dq);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_COMMAND_TORQUES, command_torques);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_DESIRED_POSITION, posori_task->_desired_position);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_DESIRED_ORIENTATION, posori_task->_desired_orientation);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_DESIRED_FORCE, posori_task->_desired_force);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_DESIRED_MOMENT, posori_task->_desired_moment);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_CURRENT_POSITION, posori_task->_current_position);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_CURRENT_VELOCITY, posori_task->_current_velocity);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_CURRENT_ORIENTATION, posori_task->_current_orientation);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_CURRENT_ANGVEL, posori_task->_current_angular_velocity);
-	redis_client.addEigenToWrite(LOGGING_ROBOT_TASK_FORCE, posori_task->_task_force);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_JOINT_ANGLES, robot->_q);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_JOINT_VELOCITIES, robot->_dq);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_COMMAND_TORQUES, command_torques);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_DESIRED_POSITION, posori_task->_desired_position);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_DESIRED_ORIENTATION, posori_task->_desired_orientation);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_DESIRED_FORCE, posori_task->_desired_force);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_DESIRED_MOMENT, posori_task->_desired_moment);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_CURRENT_POSITION, posori_task->_current_position);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_CURRENT_VELOCITY, posori_task->_current_velocity);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_CURRENT_ORIENTATION, posori_task->_current_orientation);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_CURRENT_ANGVEL, posori_task->_current_angular_velocity);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ROBOT_TASK_FORCE, posori_task->_task_force);
 
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_POSITION, teleop_task->_current_position_device);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_VELOCITY, teleop_task->_current_trans_velocity_device);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_ORIENTATION, teleop_task->_current_rotation_device);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_ANGVEL, teleop_task->_current_rot_velocity_device);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_FORCE, teleop_task->_commanded_force_device);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE, teleop_task->_commanded_torque_device);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_FORCE_TOTAL, command_force_device_plus_damping);
-	redis_client.addEigenToWrite(LOGGING_HAPTIC_COMMAND_TORQUE_TOTAL, command_torque_device_plus_damping);
+	redis_client.addEigenToWriteCallback(0, LOGGING_HAPTIC_POSITION, teleop_task->_current_position_device);
+	redis_client.addEigenToWriteCallback(0, LOGGING_HAPTIC_VELOCITY, teleop_task->_current_trans_velocity_device);
+	redis_client.addEigenToWriteCallback(0, LOGGING_HAPTIC_ORIENTATION, teleop_task->_current_rotation_device);
+	redis_client.addEigenToWriteCallback(0, LOGGING_HAPTIC_ANGVEL, teleop_task->_current_rot_velocity_device);
+	redis_client.addEigenToWriteCallback(0, LOGGING_HAPTIC_COMMAND_FORCE, teleop_task->_commanded_force_device);
+	redis_client.addEigenToWriteCallback(0, LOGGING_HAPTIC_COMMAND_TORQUE, teleop_task->_commanded_torque_device);
+	redis_client.addEigenToWriteCallback(0, LOGGING_HAPTIC_COMMAND_FORCE_TOTAL, command_force_device_plus_damping);
+	redis_client.addEigenToWriteCallback(0, LOGGING_HAPTIC_COMMAND_TORQUE_TOTAL, command_torque_device_plus_damping);
 
-	redis_client.addEigenToWrite(LOGGING_R_ROBOT_SENSOR, R_sensor);
-	redis_client.addEigenToWrite(LOGGING_R_HAPTIC_ROBOT, teleop_task->_Rotation_Matrix_DeviceToRobot);
+	redis_client.addEigenToWriteCallback(0, LOGGING_R_ROBOT_SENSOR, R_sensor);
+	redis_client.addEigenToWriteCallback(0, LOGGING_R_HAPTIC_ROBOT, teleop_task->_Rotation_Matrix_DeviceToRobot);
 
-	redis_client.addEigenToWrite(LOGGING_SENSED_FORCE_ROBOT_FRAME, posori_task->_sensed_force);
-	redis_client.addEigenToWrite(LOGGING_SENSED_MOMENT_ROBOT_FRAME, posori_task->_sensed_moment);
+	redis_client.addEigenToWriteCallback(0, LOGGING_SENSED_FORCE_ROBOT_FRAME, posori_task->_sensed_force);
+	redis_client.addEigenToWriteCallback(0, LOGGING_SENSED_MOMENT_ROBOT_FRAME, posori_task->_sensed_moment);
 
-	redis_client.addDoubleToWrite(LOGGING_BILATERAL_PASSIVITY_ALPHA_FORCE, passivity_controller->_alpha_force);
-	redis_client.addDoubleToWrite(LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT, passivity_controller->_alpha_moment);
-	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_FORCE, posori_task->_Rc_inv_force);
-	redis_client.addDoubleToWrite(LOGGING_PASSIVITY_RC_MOMENT, posori_task->_Rc_inv_moment);
+	redis_client.addDoubleToWriteCallback(0, LOGGING_BILATERAL_PASSIVITY_ALPHA_FORCE, passivity_controller->_alpha_force);
+	redis_client.addDoubleToWriteCallback(0, LOGGING_BILATERAL_PASSIVITY_ALPHA_MOMENT, passivity_controller->_alpha_moment);
+	redis_client.addDoubleToWriteCallback(0, LOGGING_PASSIVITY_RC_FORCE, posori_task->_Rc_inv_force);
+	redis_client.addDoubleToWriteCallback(0, LOGGING_PASSIVITY_RC_MOMENT, posori_task->_Rc_inv_moment);
 
 	Vector3d f_virtual_trans_rob_frame = teleop_task->_Rotation_Matrix_DeviceToRobot.transpose() * teleop_task->_f_virtual_trans;
 	Vector3d f_virtual_rot_rob_frame = teleop_task->_Rotation_Matrix_DeviceToRobot.transpose() * teleop_task->_f_virtual_rot;
 
-	redis_client.addEigenToWrite(LOGGING_VIRTUAL_FORCE_ROBOT_FRAME, f_virtual_trans_rob_frame);
-	redis_client.addEigenToWrite(LOGGING_VIRTUAL_MOMENT_ROBOT_FRAME, f_virtual_rot_rob_frame);
+	redis_client.addEigenToWriteCallback(0, LOGGING_VIRTUAL_FORCE_ROBOT_FRAME, f_virtual_trans_rob_frame);
+	redis_client.addEigenToWriteCallback(0, LOGGING_VIRTUAL_MOMENT_ROBOT_FRAME, f_virtual_rot_rob_frame);
 
-	redis_client.addDoubleToWrite(LOGGING_POSITION_ERROR_Z,	error_pos_z);
-	redis_client.addEigenToWrite(LOGGING_ANGULAR_ERROR_ORIENT,	orient_angular_error);
+	redis_client.addDoubleToWriteCallback(0, LOGGING_POSITION_ERROR_Z,	error_pos_z);
+	redis_client.addEigenToWriteCallback(0, LOGGING_ANGULAR_ERROR_ORIENT,	orient_angular_error);
 
 	double t0 = 0;
 
@@ -540,7 +542,7 @@ int main() {
 		orient_angular_error = contact_normal.cross(posori_task->_current_orientation.col(2));
 
 		// read all redis keys
-		redis_client.readAllSetupValues();
+		redis_client.executeReadCallback(0);
 
 		// Update robot model
 		if(flag_simulation)
@@ -964,7 +966,7 @@ int main() {
 		// command_force_device_plus_damping = teleop_task->_commanded_force_device;
 		// command_torque_device_plus_damping = teleop_task->_commanded_torque_device
 		// command_force_device_plus_damping.setZero();
-		redis_client.writeAllSetupValues();
+		redis_client.executeWriteCallback(0);
 
 		prev_time = current_time;
 		controller_counter++;
