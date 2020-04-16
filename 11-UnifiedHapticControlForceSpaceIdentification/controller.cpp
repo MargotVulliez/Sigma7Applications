@@ -26,6 +26,29 @@ void sighandler(int sig)
 using namespace std;
 using namespace Eigen;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//// Declaration of probabilistic filters for contact ////
+double contact_bayes_filter( double _bel_contact_prev, double _velocity_in_force_direction, double _force_norm)
+{
+    // state transition probability
+    double proba_contact_ut;
+    proba_contact_ut = exp(-M_PI*(20.0*_velocity_in_force_direction)*(20.0*_velocity_in_force_direction)); //Gaussian centered in zero for ut [0,0.05] m/s
+    // preditction
+    double pred_contact;
+    pred_contact = proba_contact_ut*_bel_contact_prev + 0.5*(1.0-_bel_contact_prev);
+    // measurement probability
+    double proba_zt_non_contact;
+    proba_zt_non_contact = exp(-M_PI*(0.1*_force_norm)*(0.1*_force_norm)); // Gaussian centered in zero for zt [0, 10]N
+    // measurement update
+    double bel_contact;
+    bel_contact = ((1.0-proba_zt_non_contact)*pred_contact)/((1.0-proba_zt_non_contact)*pred_contact + proba_zt_non_contact*(1.0-pred_contact));
+
+    return bel_contact;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 //// Define robots ////
  const string robot_file = "../resources/11-UnifiedHapticControlForceSpaceIdentification/panda_arm.urdf";
  const string robot_name = "panda";
@@ -354,9 +377,9 @@ int main() {
 	VectorXd _max_damping_device0 = redis_client.getEigenMatrixJSON(DEVICE_MAX_DAMPING_KEYS[0]);
 	VectorXd _max_force_device0 = redis_client.getEigenMatrixJSON(DEVICE_MAX_FORCE_KEYS[0]);
 
-	VectorXd _max_stiffness_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_STIFFNESS_KEYS[1]);
-	VectorXd _max_damping_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_DAMPING_KEYS[1]);
-	VectorXd _max_force_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_FORCE_KEYS[1]);
+	// VectorXd _max_stiffness_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_STIFFNESS_KEYS[1]);
+	// VectorXd _max_damping_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_DAMPING_KEYS[1]);
+	// VectorXd _max_force_device1 = redis_client.getEigenMatrixJSON(DEVICE_MAX_FORCE_KEYS[1]);
 
 	//set the device specifications to the haptic controller
 	teleop_task->_max_linear_stiffness_device = _max_stiffness_device0[0];
@@ -456,6 +479,9 @@ int main() {
 	teleop_task->_enable_plane_guidance = false;
 	teleop_task->_enable_line_guidance = false;
 
+  // Points selection
+  bool isPressed = false;
+
   // Robot displacement
   int disp_counter = 0;
   double robot_displacement_contact = -1;
@@ -464,6 +490,22 @@ int main() {
   Vector3d displacement_direction;
 
   // Contact detection parameters
+  int nbr_force_direction = 0;
+  Vector3d contact_force = Vector3d::Zero();
+  Vector3d guidance_normal_vec_first = Vector3d::Zero();
+  Vector3d guidance_normal_vec_second = Vector3d::Zero();
+  Vector3d guidance_normal_vec_third = Vector3d::Zero();
+  Vector3d guidance_motion_vec = Vector3d::Zero();
+  // Bayes filter approach
+  double bel_contact1 = 0.0;
+  double bel_contact1_prev = 0.0;
+  double bel_contact2 = 0.0;
+  double bel_contact2_prev = 0.0;
+  double bel_contact3 = 0.0;
+  double bel_contact3_prev = 0.0;
+  Vector3d velocity_direction = Vector3d::Zero();
+  Matrix3d sigma_velocity = Matrix3d::Identity();
+  // Discrete threshold_based approach
   double first_contact_threshold = 1.5; //contact force in N
   double maintained_contact_threshold = 3.0;
   int contact_counter = 0;
@@ -473,16 +515,9 @@ int main() {
   int contact_duration = 200; //increments to evaluate contact normal (0.2s)
   double mean_contact_force = 0;
   Vector3d mean_contact_normal = Vector3d::Zero();
-  Vector3d contact_force = Vector3d::Zero();
-  Vector3d guidance_normal_vec_first = Vector3d::Zero();
-  Vector3d guidance_normal_vec_second = Vector3d::Zero();
-  Vector3d guidance_normal_vec_third = Vector3d::Zero();
-  Vector3d guidance_motion_vec = Vector3d::Zero();
 	Vector3d guidance_normal_vec = Vector3d::Zero();
-  int nbr_force_direction = 0;
   int nbr_force_direction_prev = 0;
-	// Points selection
-	bool isPressed = false;
+
 
 	// setup redis keys to be updated with the callback
   redis_client.createReadCallback(0);
@@ -628,6 +663,7 @@ int main() {
 		robot->rotation(R_sensor, link_name);
 		R_sensor = R_sensor*sensor_transform_in_link.rotation();
 
+
 		if(!flag_simulation)
 		{
 			// Remove sensor bias in sensor frame
@@ -683,12 +719,16 @@ int main() {
       //cout << "Sensed robot force :" << (f_task_sensed_control_point.head(3)).transpose() << endl;
       //cout << "norm contact force :" << contact_force.norm() << endl;
       //cout << "robot displacement :" << robot_displacement.transpose() << endl;
-      cout << "robot displacement in contact direction : " << robot_displacement_contact << endl;
+      //cout << "robot displacement in contact direction : " << robot_displacement_contact << endl;
 
-      cout <<  "Contact force state :" << nbr_force_direction << endl;
-      cout << "First contact normal :"<< guidance_normal_vec_first.transpose() << endl;
-      cout << "Second contact normal :"<< guidance_normal_vec_second.transpose() << endl;
-      cout << "Motion direction" << guidance_motion_vec.transpose() << endl;
+      cout << "believe in first contact :" << bel_contact1 << endl;
+      cout << "believe in second contact :" << bel_contact2 << endl;
+      cout << "believe in third contact :" << bel_contact3 << endl;
+
+      // cout <<  "Contact force state :" << nbr_force_direction << endl;
+      // cout << "First contact normal :"<< guidance_normal_vec_first.transpose() << endl;
+      // cout << "Second contact normal :"<< guidance_normal_vec_second.transpose() << endl;
+      // cout << "Motion direction" << guidance_motion_vec.transpose() << endl;
     }
 
 
@@ -855,246 +895,393 @@ int main() {
       N_prec = posori_task->_N;
       joint_task->updateTaskModel(N_prec);
 
-      // Evaluate robot relative displacement
-      robot_displacement = pos_rob_model - pos_rob_model_prev;
-      pos_rob_model_prev = pos_rob_model;
 
-      // Total displacement over 100ms
-      if (disp_counter <= 100)
+///////////////// Probabilistic detection of contact through discrete Bayes filter ////////////////////////
+
+// compute normal space to velocity
+if (vel_trans_rob_model.norm()>=0.001)
+{
+  velocity_direction = vel_trans_rob_model.normalized();
+  sigma_velocity = Matrix3d::Identity() - velocity_direction*velocity_direction.transpose();
+}
+else
+{
+  sigma_velocity.setIdentity();
+}
+
+//// Unified haptic controller with automatic contact detection and control ////
+switch (nbr_force_direction)
       {
-        robot_total_displacement += robot_displacement;
-        disp_counter ++;
-      }
-      else
-      {
-        // Displacement in uncontrolled force direction
-        if ((robot_total_displacement.transpose()*contact_force) >= -0.0001 && (robot_total_displacement.transpose()*contact_force) <= 0.0001)
+         case 0 : // Full motion control
+           posori_task->setFullLinearMotionControl();
+           posori_task->setFullAngularMotionControl();
+
+           // First contact detection
+           bel_contact1 = contact_bayes_filter(bel_contact1_prev, vel_trans_rob_model.transpose()*contact_force, contact_force.norm());
+           bel_contact1_prev = bel_contact1;
+           if (bel_contact1 >= 0.9) // contact detected
+           {
+             guidance_normal_vec_first = contact_force.normalized();
+             posori_task->updateForceAxis(guidance_normal_vec_first);
+             nbr_force_direction ++;
+           }
+            break;
+
+         case 1 : // One controlled contact force
+         // update force control direction in robot space for unified control
+        posori_task->updateForceAxis(guidance_normal_vec_first);
+
+        // Second contact detection
+        bel_contact2 = contact_bayes_filter(bel_contact2_prev, vel_trans_rob_model.transpose()*contact_force, contact_force.norm());
+        bel_contact2_prev = bel_contact2;
+        if (bel_contact2 >= 0.9) // contact detected
         {
-          robot_displacement_contact = 0.0;
-          sigma_displacement.setIdentity();
+          guidance_normal_vec_second = contact_force.normalized();
+
+          guidance_motion_vec = guidance_normal_vec_first.cross(guidance_normal_vec_second);
+          posori_task->updateLinearMotionAxis(guidance_motion_vec);
+          nbr_force_direction ++;
         }
-        else
+
+        // Contact release
+        bel_contact1 = contact_bayes_filter(bel_contact1_prev, vel_trans_rob_model.transpose()*guidance_normal_vec_first, guidance_normal_vec_first.transpose()*f_task_sensed_control_point.head(3));
+        bel_contact1_prev = bel_contact1;
+        if (bel_contact1 <= 0.4) // first contact released
         {
-          robot_displacement_contact = robot_total_displacement.transpose()*contact_force;
-          // compute normal space to displacement
-          displacement_direction = robot_total_displacement.normalized();
-          sigma_displacement = Matrix3d::Identity() - displacement_direction*displacement_direction.transpose();
+          guidance_normal_vec_first.setZero();
+          bel_contact1_prev = 0.0;
+          bel_contact2_prev = 0.0;
+          nbr_force_direction --;
         }
-        robot_total_displacement.setZero();
-        disp_counter = 0;
+
+        // Adjust next force-controlled direction to stay normal to displacement
+        guidance_normal_vec_first = sigma_velocity*guidance_normal_vec_first;
+          break;
+
+          case 2 : // Two controlled contact forces
+          // Compute motion direction
+          guidance_motion_vec = guidance_normal_vec_first.cross(guidance_normal_vec_second);
+
+          // update force control direction in robot space for unified control
+          posori_task->updateLinearMotionAxis(guidance_motion_vec);
+
+         // Third contact detection
+         bel_contact3 = contact_bayes_filter(bel_contact3_prev, vel_trans_rob_model.transpose()*contact_force, contact_force.norm());
+         bel_contact3_prev = bel_contact3;
+         if (bel_contact3 >= 0.9) // contact detected
+         {
+           guidance_normal_vec_third = contact_force.normalized();
+           posori_task->setFullForceControl();
+           nbr_force_direction ++;
+         }
+
+         // Contact release
+         bel_contact1 = contact_bayes_filter(bel_contact1_prev, vel_trans_rob_model.transpose()*guidance_normal_vec_first, guidance_normal_vec_first.transpose()*f_task_sensed_control_point.head(3));
+         bel_contact1_prev = bel_contact1;
+         bel_contact2 = contact_bayes_filter(bel_contact2_prev, vel_trans_rob_model.transpose()*guidance_normal_vec_second, guidance_normal_vec_second.transpose()*f_task_sensed_control_point.head(3));
+         bel_contact2_prev = bel_contact2;
+         if (bel_contact1 <= 0.4) // first contact released
+         {
+           guidance_normal_vec_first = guidance_normal_vec_second;
+           guidance_normal_vec_second.setZero();
+           bel_contact1_prev = bel_contact2;
+           bel_contact2_prev = 0.0;
+           bel_contact3_prev = 0.0;
+           nbr_force_direction --;
+         }
+         else if (bel_contact2 <= 0.4) // second contact released
+         {
+           guidance_normal_vec_second.setZero();
+           bel_contact2_prev = 0.0;
+           bel_contact3_prev = 0.0;
+           nbr_force_direction --;
+         }
+
+         // Adjust next force-controlled direction to stay normal to displacement
+         guidance_normal_vec_second = sigma_velocity*guidance_normal_vec_second;
+         guidance_normal_vec_first = sigma_velocity*guidance_normal_vec_first;
+             break;
+
+          case 3 : // Full force control
+          posori_task->setFullForceControl();
+
+          // Contact release
+          bel_contact1 = contact_bayes_filter(bel_contact1_prev, vel_trans_rob_model.transpose()*guidance_normal_vec_first, guidance_normal_vec_first.transpose()*f_task_sensed_control_point.head(3));
+          bel_contact1_prev = bel_contact1;
+          bel_contact2 = contact_bayes_filter(bel_contact2_prev, vel_trans_rob_model.transpose()*guidance_normal_vec_second, guidance_normal_vec_second.transpose()*f_task_sensed_control_point.head(3));
+          bel_contact2_prev = bel_contact2;
+          bel_contact3 = contact_bayes_filter(bel_contact3_prev, vel_trans_rob_model.transpose()*guidance_normal_vec_third, guidance_normal_vec_third.transpose()*f_task_sensed_control_point.head(3));
+          bel_contact3_prev = bel_contact3;
+
+          if (bel_contact1 <= 0.4) // first contact released
+          {
+            guidance_normal_vec_first = guidance_normal_vec_second;
+            guidance_normal_vec_second = guidance_normal_vec_third;
+            guidance_normal_vec_third.setZero();
+            bel_contact1_prev = bel_contact2;
+            bel_contact2_prev = bel_contact3;
+            bel_contact3_prev = 0.0;
+            nbr_force_direction --;
+          }
+          else if (bel_contact2 <= 0.4) // second contact released
+          {
+            guidance_normal_vec_second = guidance_normal_vec_third;
+            guidance_normal_vec_third.setZero();
+            bel_contact2_prev = bel_contact3;
+            bel_contact3_prev = 0.0;
+            nbr_force_direction --;
+          }
+          else if (bel_contact3 <= 0.4) // third contact released
+          {
+            guidance_normal_vec_third.setZero();
+            bel_contact3_prev = 0.0;
+            nbr_force_direction --;
+          }
+            break;
       }
 
-      //// Unified haptic controller with automatic contact detection and control ////
-      switch (nbr_force_direction)
-            {
-               case 0 : // Full motion control
-                 posori_task->setFullLinearMotionControl();
-                 posori_task->setFullAngularMotionControl();
-
-                 teleop_task->_haptic_feedback_from_proxy = false;
-
-                 // First contact detection
-                 if (contact_force.norm() >= first_contact_threshold && robot_displacement_contact >= contact_displacement_threshold)
-                 {
-                   contact_counter = 0;
-                   mean_contact_normal.setZero();
-                   mean_contact_force = 0;
-                   nbr_force_direction_prev = nbr_force_direction;
-                   nbr_force_direction = 10; //switch to contact detection state
-                 }
-                  break;
-
-               case 1 : // One controlled contact force
-
-               guidance_normal_vec_first = guidance_normal_vec;
-
-               // update force control direction in robot space for unified control
-         			posori_task->updateForceAxis(guidance_normal_vec_first);
-
-              teleop_task->_haptic_feedback_from_proxy = false;
-
-              // Adjust force-controlled direction to stay normal to displacement
-              guidance_normal_vec_first = sigma_displacement*guidance_normal_vec_first;
-
-              guidance_normal_vec = guidance_normal_vec_first;
-
-              // Contact detection
-              if (contact_force.norm() >= maintained_contact_threshold && robot_displacement_contact >= contact_displacement_threshold)
-              {
-                contact_counter = 0;
-                mean_contact_normal.setZero();
-                mean_contact_force = 0;
-                nbr_force_direction_prev = nbr_force_direction;
-                nbr_force_direction = 10; //switch to contact detection state
-              }
-
-              // Contact release
-              if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
-              {
-                release_counter_1 ++;
-              }
-              else
-              {
-                release_counter_1 = 0;
-              }
-              if (release_counter_1 >= contact_duration)
-              {
-                guidance_normal_vec_first.setZero();
-                nbr_force_direction = nbr_force_direction-1;
-              }
-                  break;
-
-                case 2 : // Two controlled contact forces
-
-                guidance_normal_vec_second = guidance_normal_vec;
-
-                // Compute motion direction
-                guidance_motion_vec = guidance_normal_vec_first.cross(guidance_normal_vec_second);
-
-                // update force control direction in robot space for unified control
-                posori_task->updateLinearMotionAxis(guidance_motion_vec);
-
-                teleop_task->_haptic_feedback_from_proxy = false;
-
-               // Adjust force-controlled direction to stay normal to displacement
-               guidance_normal_vec_second = sigma_displacement*guidance_normal_vec_second;
-               guidance_normal_vec_first = sigma_displacement*guidance_normal_vec_first;
-
-               guidance_normal_vec = guidance_normal_vec_second;
-
-               // Contact detection
-               if (contact_force.norm() >= maintained_contact_threshold && robot_displacement_contact >= contact_displacement_threshold)
-               {
-                 contact_counter = 0;
-                 mean_contact_normal.setZero();
-                 mean_contact_force = 0;
-                 nbr_force_direction_prev = nbr_force_direction;
-                 nbr_force_direction = 10; //switch to contact detection state
-               }
-
-               // Contact release
-               if (guidance_normal_vec_second.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
-               {
-                 release_counter_2 ++;
-               }
-               else
-               {
-                 release_counter_2 = 0;
-               }
-               if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
-               {
-                 release_counter_1 ++;
-               }
-               else
-               {
-                 release_counter_1 = 0;
-               }
-               if (release_counter_1 >= contact_duration)
-               {
-                 guidance_normal_vec = guidance_normal_vec_second;
-                 guidance_normal_vec_second.setZero();
-                 nbr_force_direction = nbr_force_direction-1;
-               }
-               if (release_counter_2 >= contact_duration)
-               {
-                 guidance_normal_vec = guidance_normal_vec_first;
-                 guidance_normal_vec_second.setZero();
-                 nbr_force_direction = nbr_force_direction-1;
-               }
-                   break;
-
-                case 3 : // Full force control
-
-                guidance_normal_vec_third = guidance_normal_vec;
-
-                posori_task->setFullForceControl();
-                teleop_task->_haptic_feedback_from_proxy = false;
-
-                // Contact release
-                if (guidance_normal_vec_third.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
-                {
-                  release_counter_3 ++;
-                }
-                else
-                {
-                  release_counter_3 = 0;
-                }
-                if (guidance_normal_vec_second.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
-                {
-                  release_counter_2 ++;
-                }
-                else
-                {
-                  release_counter_2 = 0;
-                }
-                if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
-                {
-                  release_counter_1 ++;
-                }
-                else
-                {
-                  release_counter_1 = 0;
-                }
-                if (release_counter_1 >= contact_duration)
-                {
-                  guidance_normal_vec_first = guidance_normal_vec_second;
-                  guidance_normal_vec_second = guidance_normal_vec_third;
-                  guidance_normal_vec_third.setZero();
-                  nbr_force_direction = nbr_force_direction-1;
-                }
-                if (release_counter_2 >= contact_duration)
-                {
-                  guidance_normal_vec_second = guidance_normal_vec_third;
-                  guidance_normal_vec_third.setZero();
-                  nbr_force_direction = nbr_force_direction-1;
-                }
-                if (release_counter_3 >= contact_duration)
-                {
-                  guidance_normal_vec_third.setZero();
-                  nbr_force_direction = nbr_force_direction-1;
-                }
-                  break;
-
-                case 10 : // Contact detection
-                  // set force feedback to proxy computation during contact establishment
-                  teleop_task->_haptic_feedback_from_proxy = true;
-
-                  if (robot_displacement_contact < contact_displacement_threshold)
-                  {
-                    nbr_force_direction = nbr_force_direction_prev;
-                    contact_counter = 0;
-                  }
-
-                  // Evaluate mean contact force and normal direction
-                  if (contact_counter <= contact_duration)
-                  {
-                    mean_contact_force += contact_force.norm();
-                    mean_contact_normal += contact_force.normalized();
-                    contact_counter ++;
-                  }
-                  else
-                  {
-                    contact_counter = 0;
-                    if ((mean_contact_force/contact_duration) >= maintained_contact_threshold)
-                    {
-                      guidance_normal_vec = mean_contact_normal/contact_duration;
-
-                      //posori_task->setClosedLoopForceControl();
-                      //posori_task->_passivity_enabled = true;
-
-                      release_counter_1 = 0;
-                      release_counter_2 = 0;
-                      release_counter_3 = 0;
-                      nbr_force_direction = nbr_force_direction_prev + 1;
-                    }
-                    else
-                    {
-                      nbr_force_direction = nbr_force_direction_prev;
-                    }
-                  }
-                  break;
-            }
-
+///////////////// Discrete threshold_based detection of contact //////////////////////////////////
+      // // Evaluate robot relative displacement
+      // robot_displacement = pos_rob_model - pos_rob_model_prev;
+      // pos_rob_model_prev = pos_rob_model;
+      //
+      // // Total displacement over 100ms
+      // if (disp_counter <= 100)
+      // {
+      //   robot_total_displacement += robot_displacement;
+      //   disp_counter ++;
+      // }
+      // else
+      // {
+      //   // Displacement in uncontrolled force direction
+      //   if ((robot_total_displacement.transpose()*contact_force) >= -0.0001 && (robot_total_displacement.transpose()*contact_force) <= 0.0001)
+      //   {
+      //     robot_displacement_contact = 0.0;
+      //     sigma_displacement.setIdentity();
+      //   }
+      //   else
+      //   {
+      //     robot_displacement_contact = robot_total_displacement.transpose()*contact_force;
+      //     // compute normal space to displacement
+      //     displacement_direction = robot_total_displacement.normalized();
+      //     sigma_displacement = Matrix3d::Identity() - displacement_direction*displacement_direction.transpose();
+      //   }
+      //   robot_total_displacement.setZero();
+      //   disp_counter = 0;
+      // }
+      //
+      // //// Unified haptic controller with automatic contact detection and control ////
+      // switch (nbr_force_direction)
+      //       {
+      //          case 0 : // Full motion control
+      //            posori_task->setFullLinearMotionControl();
+      //            posori_task->setFullAngularMotionControl();
+      //
+      //            teleop_task->_haptic_feedback_from_proxy = false;
+      //
+      //            // First contact detection
+      //            if (contact_force.norm() >= first_contact_threshold && robot_displacement_contact >= contact_displacement_threshold)
+      //            {
+      //              contact_counter = 0;
+      //              mean_contact_normal.setZero();
+      //              mean_contact_force = 0;
+      //              nbr_force_direction_prev = nbr_force_direction;
+      //              nbr_force_direction = 10; //switch to contact detection state
+      //            }
+      //             break;
+      //
+      //          case 1 : // One controlled contact force
+      //
+      //          guidance_normal_vec_first = guidance_normal_vec;
+      //
+      //          // update force control direction in robot space for unified control
+      //    			posori_task->updateForceAxis(guidance_normal_vec_first);
+      //
+      //         teleop_task->_haptic_feedback_from_proxy = false;
+      //
+      //         // Contact detection
+      //         if (contact_force.norm() >= maintained_contact_threshold && robot_displacement_contact >= contact_displacement_threshold)
+      //         {
+      //           contact_counter = 0;
+      //           mean_contact_normal.setZero();
+      //           mean_contact_force = 0;
+      //           nbr_force_direction_prev = nbr_force_direction;
+      //           nbr_force_direction = 10; //switch to contact detection state
+      //         }
+      //
+      //         // Contact release
+      //         if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+      //         {
+      //           release_counter_1 ++;
+      //         }
+      //         else
+      //         {
+      //           release_counter_1 = 0;
+      //         }
+      //         if (release_counter_1 >= contact_duration)
+      //         {
+      //           guidance_normal_vec_first.setZero();
+      //           nbr_force_direction = nbr_force_direction-1;
+      //         }
+      //
+      //         // Adjust force-controlled direction to stay normal to displacement
+      //         guidance_normal_vec_first = sigma_displacement*guidance_normal_vec_first;
+      //
+      //         guidance_normal_vec = guidance_normal_vec_first;
+      //
+      //             break;
+      //
+      //           case 2 : // Two controlled contact forces
+      //
+      //           guidance_normal_vec_second = guidance_normal_vec;
+      //
+      //           // Compute motion direction
+      //           guidance_motion_vec = guidance_normal_vec_first.cross(guidance_normal_vec_second);
+      //
+      //           // update force control direction in robot space for unified control
+      //           posori_task->updateLinearMotionAxis(guidance_motion_vec);
+      //
+      //           teleop_task->_haptic_feedback_from_proxy = false;
+      //
+      //          // Contact detection
+      //          if (contact_force.norm() >= maintained_contact_threshold && robot_displacement_contact >= contact_displacement_threshold)
+      //          {
+      //            contact_counter = 0;
+      //            mean_contact_normal.setZero();
+      //            mean_contact_force = 0;
+      //            nbr_force_direction_prev = nbr_force_direction;
+      //            nbr_force_direction = 10; //switch to contact detection state
+      //          }
+      //
+      //          // Contact release
+      //          if (guidance_normal_vec_second.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+      //          {
+      //            release_counter_2 ++;
+      //          }
+      //          else
+      //          {
+      //            release_counter_2 = 0;
+      //          }
+      //          if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+      //          {
+      //            release_counter_1 ++;
+      //          }
+      //          else
+      //          {
+      //            release_counter_1 = 0;
+      //          }
+      //          if (release_counter_1 >= contact_duration)
+      //          {
+      //            guidance_normal_vec = guidance_normal_vec_second;
+      //            guidance_normal_vec_second.setZero();
+      //            nbr_force_direction = nbr_force_direction-1;
+      //          }
+      //          if (release_counter_2 >= contact_duration)
+      //          {
+      //            guidance_normal_vec = guidance_normal_vec_first;
+      //            guidance_normal_vec_second.setZero();
+      //            nbr_force_direction = nbr_force_direction-1;
+      //          }
+      //
+      //          // Adjust force-controlled direction to stay normal to displacement
+      //          guidance_normal_vec_second = sigma_displacement*guidance_normal_vec_second;
+      //          guidance_normal_vec_first = sigma_displacement*guidance_normal_vec_first;
+      //
+      //          guidance_normal_vec = guidance_normal_vec_second;
+      //              break;
+      //
+      //           case 3 : // Full force control
+      //
+      //           guidance_normal_vec_third = guidance_normal_vec;
+      //
+      //           posori_task->setFullForceControl();
+      //           teleop_task->_haptic_feedback_from_proxy = false;
+      //
+      //           // Contact release
+      //           if (guidance_normal_vec_third.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+      //           {
+      //             release_counter_3 ++;
+      //           }
+      //           else
+      //           {
+      //             release_counter_3 = 0;
+      //           }
+      //           if (guidance_normal_vec_second.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+      //           {
+      //             release_counter_2 ++;
+      //           }
+      //           else
+      //           {
+      //             release_counter_2 = 0;
+      //           }
+      //           if (guidance_normal_vec_first.transpose() * f_task_sensed_control_point.head(3) <= 1.0)
+      //           {
+      //             release_counter_1 ++;
+      //           }
+      //           else
+      //           {
+      //             release_counter_1 = 0;
+      //           }
+      //           if (release_counter_1 >= contact_duration)
+      //           {
+      //             guidance_normal_vec_first = guidance_normal_vec_second;
+      //             guidance_normal_vec_second = guidance_normal_vec_third;
+      //             guidance_normal_vec_third.setZero();
+      //             nbr_force_direction = nbr_force_direction-1;
+      //           }
+      //           if (release_counter_2 >= contact_duration)
+      //           {
+      //             guidance_normal_vec_second = guidance_normal_vec_third;
+      //             guidance_normal_vec_third.setZero();
+      //             nbr_force_direction = nbr_force_direction-1;
+      //           }
+      //           if (release_counter_3 >= contact_duration)
+      //           {
+      //             guidance_normal_vec_third.setZero();
+      //             nbr_force_direction = nbr_force_direction-1;
+      //           }
+      //             break;
+      //
+      //           case 10 : // Contact detection
+      //             // set force feedback to proxy computation during contact establishment
+      //             teleop_task->_haptic_feedback_from_proxy = true;
+      //
+      //             if (robot_displacement_contact < contact_displacement_threshold)
+      //             {
+      //               nbr_force_direction = nbr_force_direction_prev;
+      //               contact_counter = 0;
+      //             }
+      //
+      //             // Evaluate mean contact force and normal direction
+      //             if (contact_counter <= contact_duration)
+      //             {
+      //               mean_contact_force += contact_force.norm();
+      //               mean_contact_normal += contact_force.normalized();
+      //               contact_counter ++;
+      //             }
+      //             else
+      //             {
+      //               contact_counter = 0;
+      //               if ((mean_contact_force/contact_duration) >= maintained_contact_threshold)
+      //               {
+      //                 guidance_normal_vec = mean_contact_normal/contact_duration;
+      //
+      //                 //posori_task->setClosedLoopForceControl();
+      //                 //posori_task->_passivity_enabled = true;
+      //
+      //                 release_counter_1 = 0;
+      //                 release_counter_2 = 0;
+      //                 release_counter_3 = 0;
+      //                 nbr_force_direction = nbr_force_direction_prev + 1;
+      //               }
+      //               else
+      //               {
+      //                 nbr_force_direction = nbr_force_direction_prev;
+      //               }
+      //             }
+      //             break;
+      //       }
+      //
 
 			// Update the selection matrices for haptic controller
 			teleop_task->updateSelectionMatrices(posori_task->_sigma_position, posori_task->_sigma_orientation,
@@ -1132,7 +1319,6 @@ int main() {
   			// compute PO
   			passivity_controller->computePOPCForce(haptic_damping_force_passivity);
       }
-
 
 
 
