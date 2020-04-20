@@ -27,24 +27,71 @@ using namespace std;
 using namespace Eigen;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//// Declaration of probabilistic filters for contact ////
+//// Declaration of a Bayes filter for contact probability ////
 double contact_bayes_filter( double _bel_contact_prev, double _velocity_in_force_direction, double _force_norm)
 {
     // state transition probability
     double proba_contact_ut;
-    proba_contact_ut = exp(-M_PI*(20.0*_velocity_in_force_direction)*(20.0*_velocity_in_force_direction)); //Gaussian centered in zero for ut [0,0.05] m/s
+    proba_contact_ut = exp(-M_PI*(0.4*_velocity_in_force_direction/0.01)*(0.4*_velocity_in_force_direction/0.01)); //Gaussian centered in zero for ut 0.01 m/s
+
     // preditction
     double pred_contact;
     pred_contact = proba_contact_ut*_bel_contact_prev + 0.5*(1.0-_bel_contact_prev);
     // measurement probability
     double proba_zt_non_contact;
-    proba_zt_non_contact = exp(-M_PI*(0.1*_force_norm)*(0.1*_force_norm)); // Gaussian centered in zero for zt [0, 10]N
+    proba_zt_non_contact = exp(-M_PI*(0.4*_force_norm/3.0)*(0.4*_force_norm/3.0)); // Gaussian centered in zero for zt 3N
+
     // measurement update
     double bel_contact;
     bel_contact = ((1.0-proba_zt_non_contact)*pred_contact)/((1.0-proba_zt_non_contact)*pred_contact + proba_zt_non_contact*(1.0-pred_contact));
 
     return bel_contact;
+}
+
+//// Declaration of an extended Kalman filters to estimate contact direction ////
+void contact_direction_Kalman_filter( Vector3d _mean_prev, Matrix3d _covariance_prev, Vector3d _robot_velocity, Vector3d _sensed_force,
+                                      Vector3d _mean, Matrix3d _covariance)
+{
+  // Normalize command input and measurement
+  Vector3d ut = _robot_velocity.normalized();
+  Vector3d zt = _sensed_force.normalized();
+
+  // Compute process noise covariance matrix
+  double variance_state_noise;
+  // if (_robot_velocity.norm() >= 0.005)
+  // {
+  //   variance_state_noise = 1/(300.0*_robot_velocity.norm());
+  // }
+  // else
+  // {
+  //   variance_state_noise = 0.7;
+  // }
+  variance_state_noise = 0.3;
+  Matrix3d Rt = variance_state_noise * Matrix3d::Identity();
+
+  // Compute measurement noise covariance matrix
+  double variance_meas_noise;
+  // if (_sensed_force.norm() >= 0.5)
+  // {
+  //   variance_meas_noise = 1/(3.0*_sensed_force.norm());
+  // }
+  // else
+  // {
+  //   variance_meas_noise = 0.7;
+  // }
+  variance_meas_noise = 0.1;
+  Matrix3d Qt = variance_meas_noise * Matrix3d::Identity();
+
+  // new state prediction
+  Matrix3d Gt = Matrix3d::Identity() - ut*ut.transpose(); // State transtion Jacobian
+  Vector3d pred_mean = Gt * _mean_prev;
+  Matrix3d pred_covariance = Gt * _covariance_prev * Gt.transpose() + Rt;
+
+  // measurement update
+  Matrix3d Kt = pred_covariance * (pred_covariance + Qt).inverse(); // Kalman gain
+  _mean = pred_mean + Kt*(zt - pred_mean);
+  _mean = _mean.normalized();
+  _covariance = (Matrix3d::Identity() - Kt)*pred_covariance;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -517,6 +564,14 @@ int main() {
   Vector3d mean_contact_normal = Vector3d::Zero();
 	Vector3d guidance_normal_vec = Vector3d::Zero();
   int nbr_force_direction_prev = 0;
+  // Kalman filter parameters
+  // Vector3d mean_prev = Vector3d::Zero();
+  Vector3d mean_prev;
+  mean_prev << 1.0, 0.0, 0.0;
+  Matrix3d covariance_prev;
+  covariance_prev = 1 * Matrix3d::Identity();
+  Vector3d mean;
+  Matrix3d covariance;
 
 
 	// setup redis keys to be updated with the callback
@@ -711,14 +766,13 @@ int main() {
 
 
 
-    if(controller_counter % 100 == 20)
+    if(controller_counter % 100 == 40)
     {
-      //cout << "Position device :" << (teleop_task->_current_position_device).transpose() << endl ;
       cout << "Uncontrolled sensed contact force :" << contact_force.transpose() << endl;
       //cout << "Commanded robot force :" << (posori_task->_desired_force).transpose() << endl;
       //cout << "Sensed robot force :" << (f_task_sensed_control_point.head(3)).transpose() << endl;
-      //cout << "norm contact force :" << contact_force.norm() << endl;
-      //cout << "robot displacement :" << robot_displacement.transpose() << endl;
+      cout << "norm contact force :" << contact_force.norm() << endl;
+      cout << "robot velocity direction :" << velocity_direction.transpose() << endl;
       //cout << "robot displacement in contact direction : " << robot_displacement_contact << endl;
 
       cout << "believe in first contact :" << bel_contact1 << endl;
@@ -898,16 +952,27 @@ int main() {
 
 ///////////////// Probabilistic detection of contact through discrete Bayes filter ////////////////////////
 
-// compute normal space to velocity
-if (vel_trans_rob_model.norm()>=0.001)
+//compute normal space to velocity
+if (vel_trans_rob_model.norm()>=0.005)
 {
   velocity_direction = vel_trans_rob_model.normalized();
   sigma_velocity = Matrix3d::Identity() - velocity_direction*velocity_direction.transpose();
 }
 else
 {
+  velocity_direction.setZero();
   sigma_velocity.setIdentity();
 }
+
+//////////////////////////////////////////////////////////////////
+// Test Kalman filter for contact direction
+
+// contact_direction_Kalman_filter(mean_prev, covariance_prev, vel_trans_rob_model, contact_force, mean, covariance);
+// mean_prev = mean;
+// covariance_prev = covariance;
+
+//////////////////////////////////////////////////////////////////
+
 
 //// Unified haptic controller with automatic contact detection and control ////
 switch (nbr_force_direction)
@@ -922,7 +987,8 @@ switch (nbr_force_direction)
            if (bel_contact1 >= 0.9) // contact detected
            {
              guidance_normal_vec_first = contact_force.normalized();
-             posori_task->updateForceAxis(guidance_normal_vec_first);
+             posori_task->setForceAxis(guidance_normal_vec_first);
+             mean_prev = guidance_normal_vec_first; ////////////////////////////////////////////////////////////////////////////
              nbr_force_direction ++;
            }
             break;
@@ -939,7 +1005,7 @@ switch (nbr_force_direction)
           guidance_normal_vec_second = contact_force.normalized();
 
           guidance_motion_vec = guidance_normal_vec_first.cross(guidance_normal_vec_second);
-          posori_task->updateLinearMotionAxis(guidance_motion_vec);
+          posori_task->setLinearMotionAxis(guidance_motion_vec);
           nbr_force_direction ++;
         }
 
