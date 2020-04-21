@@ -32,14 +32,14 @@ double contact_bayes_filter( double _bel_contact_prev, double _velocity_in_force
 {
     // state transition probability
     double proba_contact_ut;
-    proba_contact_ut = exp(-M_PI*(0.4*_velocity_in_force_direction/0.01)*(0.4*_velocity_in_force_direction/0.01)); //Gaussian centered in zero for ut 0.01 m/s
+    proba_contact_ut = exp(-M_PI*(_velocity_in_force_direction/(0.01*sqrt(2*M_PI)))*(_velocity_in_force_direction/(0.01*sqrt(2*M_PI)))); //Gaussian centered in zero, detection about ut 0.01 m/s
 
     // preditction
     double pred_contact;
     pred_contact = proba_contact_ut*_bel_contact_prev + 0.5*(1.0-_bel_contact_prev);
     // measurement probability
     double proba_zt_non_contact;
-    proba_zt_non_contact = exp(-M_PI*(0.4*_force_norm/3.0)*(0.4*_force_norm/3.0)); // Gaussian centered in zero for zt 3N
+    proba_zt_non_contact = exp(-M_PI*(_force_norm/(3.0*sqrt(2*M_PI)))*(_force_norm/(3.0*sqrt(2*M_PI)))); // Gaussian centered in zero, detection around zt 3N
 
     // measurement update
     double bel_contact;
@@ -54,7 +54,11 @@ void contact_direction_Kalman_filter( Vector3d _mean_prev, Matrix3d _covariance_
 {
   // Normalize command input and measurement
   Vector3d ut = _robot_velocity.normalized();
+  if (ut.norm() != 1.0)
+  {ut.setZero();}
   Vector3d zt = _sensed_force.normalized();
+  if (zt.norm() != 1.0)
+  {zt.setZero();}
 
   // Compute process noise covariance matrix
   double variance_state_noise;
@@ -67,7 +71,7 @@ void contact_direction_Kalman_filter( Vector3d _mean_prev, Matrix3d _covariance_
   //   variance_state_noise = 0.7;
   // }
   variance_state_noise = 0.3;
-  Matrix3d Rt = variance_state_noise * Matrix3d::Identity();
+  Matrix3d Rt = variance_state_noise*variance_state_noise * Matrix3d::Identity();
 
   // Compute measurement noise covariance matrix
   double variance_meas_noise;
@@ -80,7 +84,7 @@ void contact_direction_Kalman_filter( Vector3d _mean_prev, Matrix3d _covariance_
   //   variance_meas_noise = 0.7;
   // }
   variance_meas_noise = 0.1;
-  Matrix3d Qt = variance_meas_noise * Matrix3d::Identity();
+  Matrix3d Qt = variance_meas_noise*variance_meas_noise * Matrix3d::Identity();
 
   // new state prediction
   Matrix3d Gt = Matrix3d::Identity() - ut*ut.transpose(); // State transtion Jacobian
@@ -967,9 +971,13 @@ else
 //////////////////////////////////////////////////////////////////
 // Test Kalman filter for contact direction
 
-// contact_direction_Kalman_filter(mean_prev, covariance_prev, vel_trans_rob_model, contact_force, mean, covariance);
-// mean_prev = mean;
-// covariance_prev = covariance;
+contact_direction_Kalman_filter(mean_prev, covariance_prev, vel_trans_rob_model, contact_force, mean, covariance);
+mean_prev = mean;
+covariance_prev = covariance;
+
+cout << "mean contact direction: " << mean.transpose() << endl;
+cout << "covariance contact direction: " << covariance << endl;
+
 
 //////////////////////////////////////////////////////////////////
 
