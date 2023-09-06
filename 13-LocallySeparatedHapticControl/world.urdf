@@ -1,0 +1,158 @@
+<?xml version="1.0" ?>
+
+<!-- <world name="demo_world" gravity="0.0 0.0 -9.81"> -->
+<world name="demo_world" gravity="0.0 0.0 0.0">
+
+	<robot name="sphere">
+		<model dir="./resources" path="sphere.urdf" name="sphere" />
+		<origin xyz="0.0 0.0 0.15" rpy="0 0 0" />
+	</robot>
+
+<!-- 	<static_object name="Cylinder_Floor">
+		<origin xyz="-0.75 0.0 -0.5" rpy="0 1.5759 0" />
+		<collision>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <cylinder radius="0.5" length="1.5" />
+	        </geometry>
+	    </collision>
+	    <visual>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <cylinder radius="0.5" length="1.5" />
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.5 0.3 0.3 1.0" />
+	        </material>
+	    </visual>
+	</static_object> -->
+
+
+	<static_object name="Floor">
+		<origin xyz="0.0 0.0 -0.05" rpy="0 0 0" />
+		<collision>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="3.0 3.0 0.1" />
+	        </geometry>
+	    </collision>
+	    <visual>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="3.0 3.0 0.1" />
+	        </geometry>
+	        <material name="material_gray">
+		        <color rgba="0.5 0.3 0.3 1.0" />
+	        </material>
+	    </visual>
+	</static_object>
+
+
+
+	<static_object name="Box">
+		<origin xyz="0.0 0.55 -0.05" rpy="-0.75 0.0 0.0" />
+		<collision>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.8 0.8 0.8" />
+	        </geometry>
+	    </collision>
+	    <visual>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.8 0.8 0.8" />
+	        </geometry>
+	        <material name="material_blue">
+		        <color rgba="0.4 0.4 0.4 1.0" />
+		        <!-- <color rgba="0.20 0.47 1.00 1.0" /> -->
+	        </material>
+	    </visual>
+
+	</static_object>
+
+<!-- 	<static_object name="Cylinder_Side">
+		<origin xyz="0.0 0.6 0.0" rpy="0.0 0.0 0.0" />
+		<collision>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <cylinder radius="0.4" length="0.8" />
+	        </geometry>
+	    </collision>
+	    <visual>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <cylinder radius="0.4" length="0.8" />
+	        </geometry>
+	        <material name="material_blue">
+		        <color rgba="0.20 0.47 1.00 1.0" />
+	        </material>
+	    </visual>
+	</static_object> -->
+
+<!-- 	<static_object name="Box_bis">
+		<origin xyz="-0.25 0.0 0.4" rpy="0.0 0.0 0.0" />
+		<collision>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.2 0.8 0.8" />
+	        </geometry>
+	    </collision>
+	    <visual>
+	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	        <geometry>
+	            <box size="0.2 0.8 0.8" />
+	        </geometry>
+	        <material name="material_blue">
+		        <color rgba="0.20 0.47 1.00 1.0" />
+	        </material>
+	    </visual>
+	</static_object> -->
+
+<!-- 	<static_object name="Curved Box">
+		<origin xyz="0.2 0.0 0.51" rpy="0.0 0.0 0.0" />
+		<collision>
+					<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+					<geometry>
+							<cylinder length="0.06" radius="0.1" />
+					</geometry>
+			</collision>
+			<visual>
+					<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+					<geometry>
+							<cylinder length="0.06" radius="0.1" />
+					</geometry>
+					<material name="material_blue">
+						<color rgba="0.20 0.47 1.00 1.0" />
+					</material>
+			</visual>
+	</static_object> -->
+
+	<light name="light1" type="directional">
+		<position xyz="-2.0 -2.0 2.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light>
+
+	<light name="light2" type="directional">
+		<position xyz="2.0 2.0 2.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light>
+
+<!-- 	<light name="light3" type="directional">
+		<position xyz="-2.0 2.0 -2.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light>
+
+	<light name="light4" type="directional">
+		<position xyz="-2.0 -2.0 -2.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light> -->
+
+	<camera name="camera">
+		<position xyz="2.0 0.0 0.5" />
+		<lookat xyz="0.0 0.0 0.0" />
+		<vertical xyz="0.0 0.0 1.0" />
+	</camera>
+
+	<!-- TODO: support stereo specification -->
+
+</world>

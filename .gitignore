@@ -1,0 +1,6 @@
+build/
+bin/
+**/data_logging/
+
+*.obj
+*.mtl
